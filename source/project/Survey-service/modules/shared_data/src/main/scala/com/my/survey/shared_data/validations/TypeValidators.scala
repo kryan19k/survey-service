@@ -9,6 +9,8 @@ import org.tessellation.currency.dataApplication.dataApplication.DataApplication
 import org.tessellation.schema.address.Address
 import org.tessellation.security.hash.Hash
 
+import java.time.Instant
+
 object TypeValidators {
   private def getSurveyById(
     surveyId: String,
@@ -16,6 +18,35 @@ object TypeValidators {
   ): Option[Survey] = {
     state.calculated.surveys.get(surveyId)
   }
+
+   def validateTokenReward(reward: BigInt): DataApplicationValidationErrorOr[Unit] =
+    InvalidTokenReward.unlessA(reward > 0)
+
+  def validateImageUri(uri: String): DataApplicationValidationErrorOr[Unit] =
+    InvalidImageUri.unlessA(isValidURL(uri))
+
+  def validateTimeRange(start: Instant, end: Instant): DataApplicationValidationErrorOr[Unit] =
+    InvalidTimeRange.unlessA(end.isAfter(start))
+
+  def validatePublicKey(key: String): DataApplicationValidationErrorOr[Unit] =
+    InvalidPublicKey.whenA(key.isEmpty)
+
+  def validateEarnedReward(
+    earned: BigInt,
+    state: DataState[SurveyState, SurveyCalculatedState]
+  ): DataApplicationValidationErrorOr[Unit] =
+    InvalidEarnedReward.unlessA(earned >= 0 && earned <= state.calculated.totalRewardsDistributed)
+
+  def validateSubmissionTime(
+    submitted: Long,
+    state: DataState[SurveyState, SurveyCalculatedState]
+  ): DataApplicationValidationErrorOr[Unit] =
+    InvalidSubmissionTime.unlessA(
+      state.calculated.surveys.values.exists(survey =>
+        submitted >= survey.createdAt.toEpochMilli && submitted <= survey.endTime.toEpochMilli
+      )
+    )
+}
 
   def validateIfSurveyIsUnique(
     update: CreateSurvey,

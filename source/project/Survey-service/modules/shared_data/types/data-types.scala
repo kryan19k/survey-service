@@ -4,23 +4,25 @@ import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto._
 import org.tessellation.schema.address.Address
 import org.tessellation.schema.SnapshotOrdinal
-
 import cats.data.ValidatedNel
 import org.tessellation.currency.dataApplication.DataApplicationValidationErrorOr
+import java.util.UUID
+import java.time.Instant
 
 type SurveyValidationResult[A] = ValidatedNel[DataApplicationValidationError, A]
 type SurveyDataApplicationValidationErrorOr[A] = DataApplicationValidationErrorOr[A]
 
 case class SurveySnapshot(
   ordinal: SnapshotOrdinal,
-  state: SurveyState
-)
+  surveys: Map[String, Survey],
+  responses: Map[String, List[SurveyResponse]],
+  rewards: Map[String, BigInt]
+) extends Snapshot
 
 object SurveySnapshot {
   implicit val encoder: Encoder[SurveySnapshot] = deriveEncoder
   implicit val decoder: Decoder[SurveySnapshot] = deriveDecoder
 }
-import java.util.UUID
 
 case class Survey(
   id: UUID,
@@ -28,14 +30,21 @@ case class Survey(
   questions: List[String],
   tokenReward: BigInt,
   imageUri: String,
-  createdAt: Long, // Add timestamp for sorting and analysis
-  publicKey: String // Add public key for encryption
+  createdAt: Instant,
+  endTime: Instant,
+  publicKey: String,
+  status: SurveyStatus
 )
+sealed trait SurveyStatus
+case object Active extends SurveyStatus
+case object Completed extends SurveyStatus
+case object Cancelled extends SurveyStatus
 
 object Survey {
   implicit val encoder: Encoder[Survey] = deriveEncoder
   implicit val decoder: Decoder[Survey] = deriveDecoder
 }
+
 
 case class SurveyResponse(
   surveyId: UUID,
@@ -97,16 +106,6 @@ object SurveyCalculatedState {
 }
 
 
-
-case class SurveySnapshot(
-  ordinal: SnapshotOrdinal,
-  state: SurveyState
-)
-
-object SurveySnapshot {
-  implicit val encoder: Encoder[SurveySnapshot] = deriveEncoder
-  implicit val decoder: Decoder[SurveySnapshot] = deriveDecoder
-}
 
 sealed trait DataApplicationValidationError
 case class InvalidSurvey(reason: String) extends DataApplicationValidationError

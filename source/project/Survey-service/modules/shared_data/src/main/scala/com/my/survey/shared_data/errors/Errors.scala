@@ -1,18 +1,16 @@
 package com.my.survey.shared_data.errors
 
+import cats.data.ValidatedNec
 import cats.syntax.validated._
-import org.tessellation.currency.dataApplication.DataApplicationValidationError
-import org.tessellation.currency.dataApplication.dataApplication.DataApplicationValidationErrorOr
+import org.tessellation.currency.dataApplication.dataApplication.DataApplicationValidationError
 
 object Errors {
-  type DataApplicationValidationType = DataApplicationValidationErrorOr[Unit]
+  type DataApplicationValidationType = ValidatedNec[DataApplicationValidationError, Unit]
 
-  val valid: DataApplicationValidationType =
-    ().validNec[DataApplicationValidationError]
+  val valid: DataApplicationValidationType = ().validNec
 
   implicit class DataApplicationValidationTypeOps[E <: DataApplicationValidationError](err: E) {
-    def invalid: DataApplicationValidationType =
-      err.invalidNec[Unit]
+    def invalid: DataApplicationValidationType = err.invalidNec
 
     def unlessA(cond: Boolean): DataApplicationValidationType =
       if (cond) valid else invalid
@@ -72,5 +70,28 @@ object Errors {
   case class InvalidFieldSize(fieldName: String, maxSize: Long) extends DataApplicationValidationError {
     val message = s"Invalid field size: $fieldName, maxSize: $maxSize"
   }
-}
 
+  case object InvalidTokenReward extends DataApplicationValidationError {
+    val message = "Invalid token reward"
+  }
+
+  case object InvalidImageUri extends DataApplicationValidationError {
+    val message = "Invalid image URI"
+  }
+
+  case object InvalidTimeRange extends DataApplicationValidationError {
+    val message = "Invalid time range"
+  }
+
+  case object InvalidPublicKey extends DataApplicationValidationError {
+    val message = "Invalid public key"
+  }
+
+  case object InvalidEarnedReward extends DataApplicationValidationError {
+    val message = "Invalid earned reward"
+  }
+
+  case object InvalidSubmissionTime extends DataApplicationValidationError {
+    val message = "Invalid submission time"
+  }
+}

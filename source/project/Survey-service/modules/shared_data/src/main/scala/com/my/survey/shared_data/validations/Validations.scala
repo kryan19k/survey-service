@@ -1,13 +1,15 @@
 package com.my.survey.shared_data.validations
 
 import cats.syntax.all._
-import cats.syntax.option.catsSyntaxOptionId
-import com.my.survey.shared_data.errors.Errors.valid
+import cats.syntax.option._
+import com.my.survey.shared_data.errors.Errors._
 import com.my.survey.shared_data.types._
 import com.my.survey.shared_data.validations.TypeValidators._
 import org.tessellation.currency.dataApplication.DataState
 import org.tessellation.currency.dataApplication.dataApplication.DataApplicationValidationErrorOr
 import org.tessellation.schema.address.Address
+
+import java.time.Instant
 
 object Validations {
   def createSurveyValidations(
@@ -20,10 +22,18 @@ object Validations {
           .productR(validateStringMaxSize(update.survey.title, 128, "title"))
           .productR(validateStringMaxSize(update.survey.description, 1024, "description"))
           .productR(validateListMaxSize(update.survey.questions, 50, "questions"))
+          .productR(validateTokenReward(update.survey.tokenReward))
+          .productR(validateImageUri(update.survey.imageUri))
+          .productR(validateTimeRange(update.survey.createdAt, update.survey.endTime))
+          .productR(validatePublicKey(update.survey.publicKey))
       case None =>
         validateStringMaxSize(update.survey.title, 128, "title")
           .productR(validateStringMaxSize(update.survey.description, 1024, "description"))
           .productR(validateListMaxSize(update.survey.questions, 50, "questions"))
+          .productR(validateTokenReward(update.survey.tokenReward))
+          .productR(validateImageUri(update.survey.imageUri))
+          .productR(validateTimeRange(update.survey.createdAt, update.survey.endTime))
+          .productR(validatePublicKey(update.survey.publicKey))
     }
 
   def submitResponseValidations(
@@ -35,6 +45,8 @@ object Validations {
         validateIfSurveyExists(update.response.surveyId, state)
           .productR(validateIfResponseIsUnique(update, state))
           .productR(validateResponseFormat(update.response, state))
+          .productR(validateEarnedReward(update.response.earnedReward, state))
+          .productR(validateSubmissionTime(update.response.submittedAt, state))
       case None =>
         valid
     }
