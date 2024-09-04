@@ -3,11 +3,10 @@ package com.my.survey.l1
 import cats.data.{EitherT, NonEmptyList, ValidatedNel}
 import cats.effect.Async
 import cats.syntax.all._
-import com.my.survey.shared_data.calculated_state.{CalculatedState, CalculatedStateService}
+import com.my.survey.shared_data.calculated_state.CalculatedStateService
 import com.my.survey.shared_data.encryption.Encryption
 import com.my.survey.shared_data.types._
 import com.my.survey.shared_data.token.TokenService
-import com.my.survey.shared_data.ApplicationConfig
 import com.my.survey.shared_data.SurveySnapshot
 import io.circe.{Decoder, Encoder}
 import org.http4s.{HttpRoutes, Response}
@@ -17,8 +16,10 @@ import org.tessellation.currency.dataApplication.dataApplication.DataApplication
 import org.tessellation.schema.SnapshotOrdinal
 import org.tessellation.security.hash.Hash
 import org.tessellation.security.signature.Signed
-import org.tessellation.node.shared.domain.snapshot.{SnapshotOps, SnapshotValidationError}
+import org.tessellation.node.shared.domain.snapshot.SnapshotOps
 import org.tessellation.schema.address.Address
+import cats.data.Validated
+import cats.effect.syntax.all._
 
 import java.time.Instant
 import java.util.UUID
@@ -39,17 +40,15 @@ class SurveyL1Service[F[_]: Async](
     }
   }
 
-override def validateUpdate(
-  update: SurveyUpdate
-)(implicit context: L1NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] =
+override def validateUpdate(update: SurveyUpdate)(implicit context: L1NodeContext[F]): F[ValidatedNel[DataApplicationValidationError, Unit]] =
   Async[F].delay {
     update match {
       case CreateSurvey(survey) =>
-        if (survey.questions.nonEmpty && survey.tokenReward > 0) ().validNel
-        else "Survey must have at least one question and a positive reward".invalidNel
+        if (survey.questions.nonEmpty && survey.tokenReward > 0) Validated.validNel(())
+        else Validated.invalidNel(InvalidSurvey("Survey must have at least one question and a positive reward"))
       case SubmitResponse(response) =>
-        if (response.encryptedAnswers.nonEmpty) ().validNel
-        else "Response must answer at least one question".invalidNel
+        if (response.encryptedAnswers.nonEmpty) Validated.validNel(())
+        else Validated.invalidNel(InvalidResponse("Response must answer at least one question"))
     }
   }
 
@@ -129,7 +128,7 @@ override def validateUpdate(
       case GET -> Root / "rewards" / address =>
         (for {
           state <- EitherT.right(getCalculatedState)
-          addressObj <- EitherT.fromOption[F](Address.fromString(address), BadRequest(s"Invalid address: $address"))
+          addressObj <- EitherT.fromOption[F](Address.from(address), BadRequest(s"Invalid address: $address"))
           reward = state._2.rewards.getOrElse(addressObj, BigInt(0))
           response <- EitherT.right(Ok(s"Reward balance for $address: $reward"))
         } yield response).handleErrorWith(handleError(_))
@@ -137,7 +136,7 @@ override def validateUpdate(
       case POST -> Root / "withdraw" / address =>
         (for {
           state <- EitherT.right(getCalculatedState)
-          addressObj <- EitherT.fromOption[F](Address.fromString(address), BadRequest(s"Invalid address: $address"))
+          addressObj <- EitherT.fromOption[F](Address.from(address), BadRequest(s"Invalid address: $address"))
           reward = state._2.rewards.getOrElse(addressObj, BigInt(0))
           _ <- EitherT.cond[F](reward > 0, (), BadRequest("No rewards available for withdrawal"))
           withdrawalResult <- EitherT(withdrawReward(addressObj, reward))
@@ -155,21 +154,6 @@ override def validateUpdate(
           )))
         } yield response).handleErrorWith(handleError(_))
 
-      case GET -> Root / "surveys" / UUIDVar(surveyId) / "responses" =>
-        (for {
-          state <- EitherT.right(getCalculatedState)
-          survey <- EitherT.fromOption[F](state._2.surveys.get(surveyId), NotFound(s"Survey not found: $surveyId"))
-          responses <- EitherT.right(state._2.responses.get(surveyId).traverse { encryptedResponses =>
-            encryptedResponses.traverse { encryptedResponse =>
-              encryptedResponse.encryptedAnswers.traverse { encryptedAnswer =>
-                Encryption.decryptSurveyResponse(encryptedAnswer, survey.privateKey)
-              }.map(decryptedAnswers => encryptedResponse.copy(answers = decryptedAnswers))
-            }
-          })
-          response <- EitherT.right(Ok(responses.getOrElse(List.empty)))
-        } yield response).handleErrorWith(handleError(_))
-    }
-  }
 
   private def withdrawReward(address: Address, amount: BigInt): F[Either[Throwable, Unit]] =
     tokenService.distributeReward(address, amount).attempt

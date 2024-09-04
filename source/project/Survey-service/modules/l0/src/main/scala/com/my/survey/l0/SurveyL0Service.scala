@@ -42,23 +42,29 @@ class SurveyL0Service[F[_]: Async](
   override def validateUpdate(
     update: SurveyUpdate
   )(implicit context: L0NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] =
-    Async[F].delay {
-      update match {
+    update match {
       case CreateSurvey(survey) =>
         for {
           withinLimit <- rateLimiter.checkLimit(survey.creator)
-          validationResult = 
-            if (!withinLimit) "Rate limit exceeded".asLeft
-            else if (survey.questions.isEmpty) "Survey must have at least one question".asLeft
-            else ().asRight
+          validationResult <- 
+            if (!withinLimit) Async[F].pure("Rate limit exceeded".asLeft)
+            else Async[F].delay {
+              TypeValidators.validateIfSurveyIsUnique(survey, context.state) *>
+              TypeValidators.validateStringMaxSize(survey.title, 128, "title") *>
+              TypeValidators.validateStringMaxSize(survey.description, 1024, "description") *>
+              TypeValidators.validateListMaxSize(survey.questions, 50, "questions")
+            }
         } yield validationResult
       case SubmitResponse(response) =>
         for {
           withinLimit <- rateLimiter.checkLimit(response.respondent)
-          validationResult = 
-            if (!withinLimit) "Rate limit exceeded".asLeft
-            else if (response.encryptedAnswers.isEmpty) "Response must have answers".asLeft
-            else ().asRight
+          validationResult <- 
+            if (!withinLimit) Async[F].pure("Rate limit exceeded".asLeft)
+            else Async[F].delay {
+              TypeValidators.validateIfSurveyExists(response.surveyId, context.state) *>
+              TypeValidators.validateIfResponseIsUnique(response, context.state) *>
+              TypeValidators.validateResponseFormat(response, context.state)
+            }
         } yield validationResult
     }
 
@@ -77,14 +83,13 @@ class SurveyL0Service[F[_]: Async](
     calculatedState: SurveyCalculatedState,
     update: SurveyUpdate
   ): F[(SurveyState, SurveyCalculatedState)] = update match {
-          case CreateSurvey(survey) =>
+    case CreateSurvey(survey) =>
       for {
         deductResult <- tokenService.deductFee(survey.creator, survey.tokenReward)
         result <- deductResult match {
           case Right(_) =>
             val newState = state.copy(
-              surveys = state.surveys + (survey.id -> survey),
-              rewards = state.rewards.updated(survey.creator, state.rewards.getOrElse(survey.creator, BigInt(0)) - survey.tokenReward)
+              surveys = state.surveys + (survey.id -> survey)
             )
             val newCalculatedState = calculatedState.copy(
               surveys = calculatedState.surveys + (survey.id -> survey),
@@ -100,28 +105,23 @@ class SurveyL0Service[F[_]: Async](
     case SubmitResponse(response) =>
       for {
         survey <- state.surveys.get(response.surveyId).liftTo[F](new Exception(s"Survey ${response.surveyId} not found"))
-        rewardAmount = calculateReward(survey, response)
-        distributeResult <- tokenService.distributeReward(response.respondent, rewardAmount)
-        result <- distributeResult match {
-          case Right(_) =>
-            val newResponses = state.responses.get(response.surveyId) match {
-              case Some(existingResponses) => existingResponses :+ response
-              case None => List(response)
-            }
-            val newState = state.copy(
-              responses = state.responses + (response.surveyId -> newResponses),
-              rewards = state.rewards.updated(response.respondent, state.rewards.getOrElse(response.respondent, BigInt(0)) + rewardAmount)
-            )
-            val newCalculatedState = calculatedState.copy(
-              responses = calculatedState.responses + (response.surveyId -> newResponses),
-              totalResponses = calculatedState.totalResponses + 1,
-              totalRewardsDistributed = calculatedState.totalRewardsDistributed + rewardAmount
-            )
-            (newState, newCalculatedState).pure[F]
-          case Left(error) =>
-            Async[F].raiseError[(SurveyState, SurveyCalculatedState)](new Exception(s"Failed to distribute reward: ${error.toString}"))
+        encryptedAnswers <- response.answers.traverse { answer =>
+          Encryption.encryptSurveyResponse(answer.toString, survey.publicKey)
         }
-      } yield result
+        encryptedResponse = response.copy(encryptedAnswers = encryptedAnswers)
+        newResponses = state.responses.get(response.surveyId) match {
+          case Some(existingResponses) => existingResponses :+ encryptedResponse
+          case None => List(encryptedResponse)
+        }
+        newState = state.copy(
+          responses = state.responses + (response.surveyId -> newResponses)
+        )
+        newCalculatedState = calculatedState.copy(
+          responses = calculatedState.responses + (response.surveyId -> newResponses),
+          totalResponses = calculatedState.totalResponses + 1,
+          totalRewardsDistributed = calculatedState.totalRewardsDistributed + response.earnedReward
+        )
+      } yield (newState, newCalculatedState)
   }
 
   private def calculateReward(survey: Survey, response: SurveyResponse): BigInt = {
