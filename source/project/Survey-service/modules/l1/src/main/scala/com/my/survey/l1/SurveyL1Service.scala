@@ -3,11 +3,12 @@ package com.my.survey.l1
 import cats.data.{EitherT, NonEmptyList, ValidatedNel}
 import cats.effect.Async
 import cats.syntax.all._
-import com.my.survey.shared_data.calculated_state.CalculatedStateService
-import com.my.survey.shared_data.types.States._
-import com.my.survey.shared_data.types.Updates._
-import com.my.survey.shared_data.types.{Survey, SurveySnapshot}
+import com.my.survey.shared_data.calculated_state.{CalculatedState, CalculatedStateService}
+import com.my.survey.shared_data.encryption.Encryption
+import com.my.survey.shared_data.types._
 import com.my.survey.shared_data.token.TokenService
+import com.my.survey.shared_data.ApplicationConfig
+import com.my.survey.shared_data.SurveySnapshot
 import io.circe.{Decoder, Encoder}
 import org.http4s.{HttpRoutes, Response}
 import org.http4s.dsl.Http4sDsl
@@ -29,44 +30,44 @@ class SurveyL1Service[F[_]: Async](
   with SnapshotOps[F, SurveySnapshot] {
 
   override def validateData(
-    state: DataState[SurveyState, SurveyCalculatedState],
-    updates: NonEmptyList[Signed[SurveyUpdate]]
-  )(implicit context: L1NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] =
-    Async[F].delay {
-      updates.traverse_ { update =>
-        validateUpdate(update.value).leftMap(_.headOption.getOrElse("Unknown error"))
-      }
+  state: DataState[SurveyState, SurveyCalculatedState],
+  updates: NonEmptyList[Signed[SurveyUpdate]]
+)(implicit context: L1NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] =
+  Async[F].delay {
+    updates.traverse_ { update =>
+      validateUpdate(update.value).toValidatedNel
     }
+  }
 
-  override def validateUpdate(
-    update: SurveyUpdate
-  )(implicit context: L1NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] =
-    Async[F].delay {
-      update match {
-        case CreateSurvey(survey) =>
-          if (survey.questions.nonEmpty && survey.tokenReward > 0) ().asRight 
-          else "Survey must have at least one question and a positive reward".asLeft
-        case SubmitResponse(response) =>
-          if (response.encryptedAnswers.nonEmpty) ().asRight 
-          else "Response must answer at least one question".asLeft
-      }
+override def validateUpdate(
+  update: SurveyUpdate
+)(implicit context: L1NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] =
+  Async[F].delay {
+    update match {
+      case CreateSurvey(survey) =>
+        if (survey.questions.nonEmpty && survey.tokenReward > 0) ().validNel
+        else "Survey must have at least one question and a positive reward".invalidNel
+      case SubmitResponse(response) =>
+        if (response.encryptedAnswers.nonEmpty) ().validNel
+        else "Response must answer at least one question".invalidNel
     }
+  }
 
   override def combine(
-    state: DataState[SurveyState, SurveyCalculatedState],
-    updates: List[Signed[SurveyUpdate]]
-  )(implicit context: L1NodeContext[F]): F[DataState[SurveyState, SurveyCalculatedState]] = {
-    for {
-      newState <- Async[F].delay {
-        val (newSurveyState, newCalculatedState) = updates.foldLeft((state.state, state.calculatedState)) { 
-          case ((accState, accCalcState), signedUpdate) =>
-            updateState(accState, accCalcState, signedUpdate.value)
-        }
-        DataState(newSurveyState, newCalculatedState)
+  state: DataState[SurveyState, SurveyCalculatedState],
+  updates: List[Signed[SurveyUpdate]]
+)(implicit context: L1NodeContext[F]): F[DataState[SurveyState, SurveyCalculatedState]] = {
+  for {
+    newState <- Async[F].delay {
+      val (newSurveyState, newCalculatedState) = updates.foldLeft((state.state, state.calculatedState)) { 
+        case ((accState, accCalcState), signedUpdate) =>
+          updateState(accState, accCalcState, signedUpdate.value)
       }
-      _ <- handleUnrewardedSurveys
-    } yield newState
-  }
+      DataState(newSurveyState, newCalculatedState)
+    }
+    _ <- handleUnrewardedSurveys
+  } yield newState
+}
 
   private def updateState(
     state: SurveyState,
@@ -111,12 +112,19 @@ class SurveyL1Service[F[_]: Async](
           response <- EitherT.right(Ok(state._2.surveys.values.toList))
         } yield response).handleErrorWith(handleError(_))
 
-      case GET -> Root / "surveys" / UUIDVar(surveyId) =>
-        (for {
-          state <- EitherT.right(getCalculatedState)
-          survey <- EitherT.fromOption[F](state._2.surveys.get(surveyId), NotFound(s"Survey not found: $surveyId"))
-          response <- EitherT.right(Ok(survey))
-        } yield response).handleErrorWith(handleError(_))
+      
+    case GET -> Root / "surveys" / UUIDVar(surveyId) / "responses" =>
+      (for {
+        state <- EitherT.right(getCalculatedState)
+        survey <- EitherT.fromOption[F](state._2.surveys.get(surveyId), NotFound(s"Survey not found: $surveyId"))
+        responses <- EitherT.right(state._2.responses.get(surveyId).traverse { encryptedResponses =>
+          encryptedResponses.traverse { encryptedResponse =>
+            Encryption.decryptSurveyResponse(encryptedResponse.encryptedAnswers, survey.publicKey)
+              .map(decryptedAnswers => encryptedResponse.copy(encryptedAnswers = decryptedAnswers))
+          }
+        })
+        response <- EitherT.right(Ok(responses.getOrElse(List.empty)))
+      } yield response).handleErrorWith(handleError(_))
 
       case GET -> Root / "rewards" / address =>
         (for {
@@ -145,6 +153,20 @@ class SurveyL1Service[F[_]: Async](
             "totalResponses" -> stats.totalResponses,
             "totalRewardsDistributed" -> stats.totalRewardsDistributed
           )))
+        } yield response).handleErrorWith(handleError(_))
+
+      case GET -> Root / "surveys" / UUIDVar(surveyId) / "responses" =>
+        (for {
+          state <- EitherT.right(getCalculatedState)
+          survey <- EitherT.fromOption[F](state._2.surveys.get(surveyId), NotFound(s"Survey not found: $surveyId"))
+          responses <- EitherT.right(state._2.responses.get(surveyId).traverse { encryptedResponses =>
+            encryptedResponses.traverse { encryptedResponse =>
+              encryptedResponse.encryptedAnswers.traverse { encryptedAnswer =>
+                Encryption.decryptSurveyResponse(encryptedAnswer, survey.privateKey)
+              }.map(decryptedAnswers => encryptedResponse.copy(answers = decryptedAnswers))
+            }
+          })
+          response <- EitherT.right(Ok(responses.getOrElse(List.empty)))
         } yield response).handleErrorWith(handleError(_))
     }
   }
@@ -189,10 +211,10 @@ class SurveyL1Service[F[_]: Async](
   override def calculatedStateDecoder: Decoder[SurveyCalculatedState] = implicitly[Decoder[SurveyCalculatedState]]
 
   override def getCalculatedState(implicit context: L1NodeContext[F]): F[(SnapshotOrdinal, SurveyCalculatedState)] =
-    calculatedStateService.get.map(calculatedState => (calculatedState.ordinal, calculatedState.state))
+  calculatedStateService.get.map(calculatedState => (calculatedState.ordinal, calculatedState.state))
 
   override def setCalculatedState(
-    ordinal: SnapshotOrdinal,
+  ordinal: SnapshotOrdinal,
     state: SurveyCalculatedState
   )(implicit context: L1NodeContext[F]): F[Boolean] =
     calculatedStateService.set(ordinal, state)

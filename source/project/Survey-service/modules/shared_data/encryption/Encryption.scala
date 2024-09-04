@@ -29,4 +29,19 @@ object Encryption {
       cipher.init(Cipher.DECRYPT_MODE, secretKey)
       new String(cipher.doFinal(Base64.decode(encryptedData)))
     }
+
+  // survey-specific encryption methods
+
+  def encryptSurveyResponse[F[_]: Sync](response: String, publicKey: String): F[String] =
+    encrypt(response, publicKey)
+
+  def decryptSurveyResponse[F[_]: Sync](encryptedResponse: String, privateKey: String): F[String] =
+    decrypt(encryptedResponse, privateKey)
+
+  def generateEncryptionKey[F[_]: Sync]: F[String] =
+    Sync[F].delay {
+      val keyBytes = new Array[Byte](16) // 128 bits
+      new java.security.SecureRandom().nextBytes(keyBytes)
+      Base64.toBase64String(keyBytes)
+    }
 }
