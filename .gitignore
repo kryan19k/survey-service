@@ -4,7 +4,7 @@ infra/docker/grafana/prometheus/monitoring/
 .idea
 infra/docker/shared/jars/**.jar
 .vscode
-
+euclid.json
 source/metagraph-l0/genesis/genesis.address
 source/metagraph-l0/genesis/genesis.snapshot
 source/*-monitoring-service
