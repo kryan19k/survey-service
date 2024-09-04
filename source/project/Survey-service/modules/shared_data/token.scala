@@ -1,4 +1,4 @@
-package com.mysurvey.metagraph.shared_data.token
+package com.my.survey.shared_data.token
 
 import cats.effect.{Async, Ref}
 import cats.syntax.all._

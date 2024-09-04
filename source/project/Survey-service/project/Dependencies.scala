@@ -12,10 +12,12 @@ object Dependencies {
     val catsEffect = "3.5.1"
   }
 
+  def tessellation(artifact: String): ModuleID = "org.constellation" %% s"tessellation-$artifact" % V.tessellation
+
   object Libraries {
-  val tessellationNodeShared = "com.github.Constellation-Labs.tessellation" % "node-shared_2.13" % V.tessellation
-  val tessellationCurrencyL0 = "com.github.Constellation-Labs.tessellation" % "currency-l0_2.13" % V.tessellation
-  val tessellationCurrencyL1 = "com.github.Constellation-Labs.tessellation" % "currency-l1_2.13" % V.tessellation
+    val tessellationNodeShared = tessellation("node-shared")
+    val tessellationCurrencyL0 = tessellation("currency-l0")
+    val tessellationCurrencyL1 = tessellation("currency-l1")
 
     val http4sCore = "org.http4s" %% "http4s-core" % V.http4s
     val http4sDsl = "org.http4s" %% "http4s-dsl" % V.http4s
@@ -51,4 +53,7 @@ object Dependencies {
     val betterMonadicFor = compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
     val semanticDB = compilerPlugin("org.scalameta" % "semanticdb-scalac" % "4.7.1" cross CrossVersion.full)
   }
+
+  // Scalafix rules
+  val organizeImports = "com.github.liancheng" %% "organize-imports" % "0.5.0"
 }

@@ -1,4 +1,4 @@
-package com.mysurvey.metagraph.shared_data.app
+package com.my.survey.shared_data.app
 
 import cats.effect.kernel.Sync
 import pureconfig._

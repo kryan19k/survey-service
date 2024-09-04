@@ -1,13 +1,13 @@
-package com.my.mysurvey.metagraph.l1
+package com.my.survey.l1
 
 import cats.data.{EitherT, NonEmptyList, ValidatedNel}
 import cats.effect.Async
 import cats.syntax.all._
-import com.my.mysurvey.metagraph.shared_data.calculated_state.CalculatedStateService
-import com.my.mysurvey.metagraph.shared_data.types.States._
-import com.my.mysurvey.metagraph.shared_data.types.Updates._
-import com.mysurvey.metagraph.shared_data.types.{Survey, SurveySnapshot}
-import com.mysurvey.metagraph.shared_data.token.TokenService
+import com.my.survey.shared_data.calculated_state.CalculatedStateService
+import com.my.survey.shared_data.types.States._
+import com.my.survey.shared_data.types.Updates._
+import com.my.survey.shared_data.types.{Survey, SurveySnapshot}
+import com.my.survey.shared_data.token.TokenService
 import io.circe.{Decoder, Encoder}
 import org.http4s.{HttpRoutes, Response}
 import org.http4s.dsl.Http4sDsl

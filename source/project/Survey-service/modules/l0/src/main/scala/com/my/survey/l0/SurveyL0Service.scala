@@ -1,11 +1,11 @@
-package com.my.mysurvey.metagraph.l0
+package com.my.survey.l0
 
 import cats.data.{NonEmptyList, ValidatedNel}
 import cats.effect.Async
 import cats.syntax.all._
-import com.mysurvey.metagraph.shared_data.calculated_state.CalculatedStateService
-import com.mysurvey.metagraph.shared_data.types._
-import com.mysurvey.metagraph.shared_data.token.TokenService
+import com.my.survey.shared_data.calculated_state.CalculatedStateService
+import com.my.survey.shared_data.types._
+import com.my.survey.shared_data.token.TokenService
 import com.mysurvey.metagraph.shared_data.ratelimit.RateLimiter
 import io.circe.{Decoder, Encoder}
 import org.tessellation.currency.dataApplication._
@@ -14,8 +14,8 @@ import org.tessellation.schema.SnapshotOrdinal
 import org.tessellation.security.hash.Hash
 import org.tessellation.security.signature.Signed
 import org.tessellation.node.shared.domain.snapshot.{SnapshotOps, SnapshotValidationError}
-import com.mysurvey.metagraph.shared_data.encryption.Encryption
-import com.mysurvey.metagraph.shared_data.types.{Survey, SurveyResponse}
+import com.my.survey.shared_data.encryption.Encryption
+import com.my.survey.shared_data.types.{Survey, SurveyResponse}
 
 // SurveyL0Service is the main service class for handling survey operations in the L0 layer
 // It extends DataApplicationL0Service to integrate with the blockchain framework

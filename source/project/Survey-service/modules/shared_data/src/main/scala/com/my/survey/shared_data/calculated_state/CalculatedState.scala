@@ -1,9 +1,9 @@
-package com.mysurvey.metagraph.shared_data.calculated_state
+package com.my.survey.shared_data.calculated_state
 
 import cats.effect.{Async, Ref}
 import cats.syntax.all._
-import com.mysurvey.metagraph.shared_data.types.States._
-import com.mysurvey.metagraph.shared_data.calculated_state.postgres.PostgresService
+import com.my.survey.shared_data.types.States._
+import com.my.survey.shared_data.calculated_state.postgres.PostgresService
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto._
 import org.tessellation.schema.SnapshotOrdinal

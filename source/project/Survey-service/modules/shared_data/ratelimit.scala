@@ -1,4 +1,4 @@
-package com.mysurvey.metagraph.shared_data.ratelimit
+package com.my.survey.shared_data.ratelimit
 
 import cats.effect.{Async, Ref, Clock}
 import cats.syntax.all._

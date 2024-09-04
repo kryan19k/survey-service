@@ -1,6 +1,6 @@
-package com.my.nft.shared_data.deserializers
+package com.my.survey.shared_data.deserializers
 
-import com.my.nft.shared_data.types.Types._
+import com.my.survey.shared_data.types._
 import io.circe.Decoder
 import io.circe.jawn.decode
 import org.tessellation.currency.dataApplication.DataUpdate
@@ -17,13 +17,13 @@ object Deserializers {
 
   def deserializeUpdate(
     bytes: Array[Byte]
-  ): Either[Throwable, NFTUpdate] =
-    deserialize[NFTUpdate](bytes)
+  ): Either[Throwable, SurveyUpdate] =
+    deserialize[SurveyUpdate](bytes)
 
   def deserializeState(
     bytes: Array[Byte]
-  ): Either[Throwable, NFTUpdatesState] =
-    deserialize[NFTUpdatesState](bytes)
+  ): Either[Throwable, SurveyState] =
+    deserialize[SurveyState](bytes)
 
   def deserializeBlock(
     bytes: Array[Byte]
@@ -32,6 +32,6 @@ object Deserializers {
 
   def deserializeCalculatedState(
     bytes: Array[Byte]
-  ): Either[Throwable, NFTUpdatesCalculatedState] =
-    deserialize[NFTUpdatesCalculatedState](bytes)
+  ): Either[Throwable, SurveyCalculatedState] =
+    deserialize[SurveyCalculatedState](bytes)
 }

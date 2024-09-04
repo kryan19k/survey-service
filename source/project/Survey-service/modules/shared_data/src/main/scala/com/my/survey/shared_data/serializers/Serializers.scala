@@ -1,8 +1,8 @@
-package com.my.nft.shared_data.serializers
+package com.my.survey.shared_data.serializers
 
-import com.my.nft.shared_data.types.Types._
+import com.my.survey.shared_data.types._
 import io.circe.Encoder
-import io.circe.syntax.EncoderOps
+import io.circe.syntax._
 import org.tessellation.currency.dataApplication.DataUpdate
 import org.tessellation.currency.dataApplication.dataApplication.DataApplicationBlock
 import org.tessellation.security.signature.Signed
@@ -18,7 +18,7 @@ object Serializers {
   }
 
   def serializeUpdate(
-    update: NFTUpdate
+    update: SurveyUpdate
   ): Array[Byte] = {
     val encoder = Base64.getEncoder
     val data_sign_prefix = "\u0019Constellation Signed Data:\n"
@@ -33,9 +33,9 @@ object Serializers {
   }
 
   def serializeState(
-    state: NFTUpdatesState
+    state: SurveyState
   ): Array[Byte] =
-    serialize[NFTUpdatesState](state)
+    serialize[SurveyState](state)
 
   def serializeBlock(
     state: Signed[DataApplicationBlock]
@@ -43,7 +43,7 @@ object Serializers {
     serialize[Signed[DataApplicationBlock]](state)
 
   def serializeCalculatedState(
-    state: NFTUpdatesCalculatedState
+    state: SurveyCalculatedState
   ): Array[Byte] =
-    serialize[NFTUpdatesCalculatedState](state)
+    serialize[SurveyCalculatedState](state)
 }
