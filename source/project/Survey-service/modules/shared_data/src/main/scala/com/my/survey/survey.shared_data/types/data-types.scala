@@ -1,16 +1,17 @@
 package com.my.survey.shared_data.survey.shared_data.types
 
-import io.circe.{Decoder, Encoder, HCursor, Json, DecodingFailure}
+import io.circe.{Decoder, Encoder, Json, DecodingFailure}
 import io.circe.generic.semiauto._
 import org.tessellation.schema.address.Address
 import cats.data.ValidatedNel
+
 import java.util.UUID
 import java.time.Instant
 
 object SurveyTypes {
   type SurveyValidationResult[A] = ValidatedNel[DataApplicationValidationError, A]
-  type SurveyDataApplicationValidationErrorOr[A] = DataApplicationValidationErrorOr[A]
 }
+
 
 case class Survey(
   id: UUID,
@@ -28,6 +29,21 @@ sealed trait SurveyStatus
 case object Active extends SurveyStatus
 case object Completed extends SurveyStatus
 case object Cancelled extends SurveyStatus
+
+object SurveyStatus {
+  implicit val encoder: Encoder[SurveyStatus] = Encoder.encodeString.contramap {
+    case Active => "Active"
+    case Completed => "Completed"
+    case Cancelled => "Cancelled"
+  }
+
+  implicit val decoder: Decoder[SurveyStatus] = Decoder.decodeString.emap {
+    case "Active" => Right(Active)
+    case "Completed" => Right(Completed)
+    case "Cancelled" => Right(Cancelled)
+    case other => Left(s"Invalid SurveyStatus: $other")
+  }
+}
 
 object Survey {
   implicit val encoder: Encoder[Survey] = deriveEncoder[Survey]
@@ -63,32 +79,24 @@ case class CreateSurvey(survey: Survey) extends SurveyUpdate
 case class SubmitResponse(response: SurveyResponse) extends SurveyUpdate
 
 object SurveyUpdate {
-  implicit val encoder: Encoder[SurveyUpdate] = new Encoder[SurveyUpdate] {
-    final def apply(a: SurveyUpdate): Json = a match {
-      case cs: CreateSurvey => Json.obj(
-        ("type", Json.fromString("CreateSurvey")),
-        ("survey", Encoder[Survey].apply(cs.survey))
-      )
-      case sr: SubmitResponse => Json.obj(
-        ("type", Json.fromString("SubmitResponse")),
-        ("response", Encoder[SurveyResponse].apply(sr.response))
-      )
+  implicit val encoder: Encoder[SurveyUpdate] = Encoder.instance {
+    case cs: CreateSurvey => Json.obj(
+      ("type", Json.fromString("CreateSurvey")),
+      ("survey", Encoder[Survey].apply(cs.survey))
+    )
+    case sr: SubmitResponse => Json.obj(
+      ("type", Json.fromString("SubmitResponse")),
+      ("response", Encoder[SurveyResponse].apply(sr.response))
+    )
+  }
+
+  implicit val decoder: Decoder[SurveyUpdate] = Decoder.instance { c =>
+    c.downField("type").as[String].flatMap {
+      case "CreateSurvey" => c.downField("survey").as[Survey].map(CreateSurvey)
+      case "SubmitResponse" => c.downField("response").as[SurveyResponse].map(SubmitResponse)
+      case other => Left(DecodingFailure(s"Unknown SurveyUpdate type: $other", c.history))
     }
   }
-
-  implicit val decoder: Decoder[SurveyUpdate] = new Decoder[SurveyUpdate] {
-    final def apply(c: HCursor): Decoder.Result[SurveyUpdate] = 
-      c.downField("type").as[String].flatMap {
-        case "CreateSurvey" => c.downField("survey").as[Survey].map(CreateSurvey)
-        case "SubmitResponse" => c.downField("response").as[SurveyResponse].map(SubmitResponse)
-        case _ => Left(DecodingFailure("Unknown SurveyUpdate type", c.history))
-      }
-  }
-
-  implicit val createSurveyEncoder: Encoder[CreateSurvey] = deriveEncoder[CreateSurvey]
-  implicit val createSurveyDecoder: Decoder[CreateSurvey] = deriveDecoder[CreateSurvey]
-  implicit val submitResponseEncoder: Encoder[SubmitResponse] = deriveEncoder[SubmitResponse]
-  implicit val submitResponseDecoder: Decoder[SubmitResponse] = deriveDecoder[SubmitResponse]
 }
 
 case class SurveyCalculatedState(

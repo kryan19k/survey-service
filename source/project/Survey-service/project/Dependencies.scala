@@ -18,6 +18,7 @@ object Dependencies {
     val tessellationNodeShared = tessellation("node-shared")
     val tessellationCurrencyL0 = tessellation("currency-l0")
     val tessellationCurrencyL1 = tessellation("currency-l1")
+    
 
     val http4sCore = "org.http4s" %% "http4s-core" % V.http4s
     val http4sDsl = "org.http4s" %% "http4s-dsl" % V.http4s
@@ -40,6 +41,8 @@ object Dependencies {
     val postgres = "org.postgresql" % "postgresql" % V.postgres
 
     val bouncyCastle = "org.bouncycastle" % "bcprov-jdk15on" % "1.70"
+
+    val refined = "eu.timepit" %% "refined" % "0.10.1"
 
     // Test libraries
     val weaverCats = "com.disneystreaming" %% "weaver-cats" % V.weaver

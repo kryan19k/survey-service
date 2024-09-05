@@ -1,49 +1,41 @@
 package com.my.survey.l0
 
-import cats.data.{NonEmptyList, ValidatedNel}
+import cats.data.{ValidatedNel, EitherT}
 import cats.effect.Async
 import cats.syntax.all._
 import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedStateService
 import com.my.survey.shared_data.survey.shared_data.types._
-import com.my.survey.shared_data.survey.shared_data.token.TokenService
 import com.my.survey.shared_data.survey.shared_data.rate_limiter.RateLimiter
 import com.my.survey.shared_data.survey.shared_data.encryption.Encryption
-import com.my.survey.shared_data.survey.shared_data.types.{Survey, SurveyResponse}
+import com.my.survey.shared_data.validations.{TypeValidators, Validations}
 import io.circe.{Decoder, Encoder}
+import org.http4s.HttpRoutes
 import org.tessellation.currency.dataApplication._
 import org.tessellation.currency.dataApplication.dataApplication.{DataApplicationBlock, DataApplicationValidationErrorOr}
 import org.tessellation.schema.SnapshotOrdinal
 import org.tessellation.security.hash.Hash
-import org.tessellation.security.signature.Signed
 import org.tessellation.node.shared.domain.snapshot.{SnapshotOps, SnapshotValidationError}
-import com.my.survey.shared_data.validations.TypeValidators
-import com.my.survey.shared_data.validations.Validations
+import org.tessellation.currency.l0.ApiClient
+import org.tessellation.schema.address.Address
+import org.tessellation.schema.transaction.TransactionAmount
 
+import java.time.Instant
 
-
-
-// SurveyL0Service is the main service class for handling survey operations in the L0 layer
-// It extends DataApplicationL0Service to integrate with the blockchain framework
-// and SnapshotOps to handle state snapshots
 class SurveyL0Service[F[_]: Async](
   calculatedStateService: CalculatedStateService[F],
-  tokenService: TokenService[F],
+  apiClient: ApiClient[F],
   rateLimiter: RateLimiter[F]
 ) extends DataApplicationL0Service[F, SurveyUpdate, SurveyState, SurveyCalculatedState]
   with SnapshotOps[F, SurveySnapshot] {
 
-  // Validates the data in a block before it's added to the blockchain
   override def validateData(
     state: DataState[SurveyState, SurveyCalculatedState],
-    block: DataApplicationBlock
+    block: DataApplicationBlock[SurveyUpdate]
   )(implicit context: L0NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] =
-    Async[F].delay {
-      block.updates.traverse_ { update =>
-        validateUpdate(update.signed.value).leftMap(_.headOption.getOrElse("Unknown error"))
-      }
+    block.updates.traverse_ { update =>
+      validateUpdate(update.value).leftMap(_.headOption.getOrElse("Unknown error"))
     }
 
-  // Validates individual updates (CreateSurvey or SubmitResponse)
   override def validateUpdate(
     update: SurveyUpdate
   )(implicit context: L0NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] =
@@ -54,10 +46,7 @@ class SurveyL0Service[F[_]: Async](
           validationResult <- 
             if (!withinLimit) Async[F].pure("Rate limit exceeded".asLeft)
             else Async[F].delay {
-              TypeValidators.validateIfSurveyIsUnique(survey, context.state) *>
-              TypeValidators.validateStringMaxSize(survey.title, 128, "title") *>
-              TypeValidators.validateStringMaxSize(survey.description, 1024, "description") *>
-              TypeValidators.validateListMaxSize(survey.questions, 50, "questions")
+              Validations.createSurveyValidations(survey, Some(context.state.state)).toEither.leftMap(_.toString)
             }
         } yield validationResult
       case SubmitResponse(response) =>
@@ -66,19 +55,17 @@ class SurveyL0Service[F[_]: Async](
           validationResult <- 
             if (!withinLimit) Async[F].pure("Rate limit exceeded".asLeft)
             else Async[F].delay {
-              TypeValidators.validateIfSurveyExists(response.surveyId, context.state) *>
-              TypeValidators.validateIfResponseIsUnique(response, context.state) *>
-              TypeValidators.validateResponseFormat(response, context.state)
+              Validations.submitResponseValidations(response, Some(context.state.state)).toEither.leftMap(_.toString)
             }
         } yield validationResult
     }
 
   override def combine(
     state: DataState[SurveyState, SurveyCalculatedState],
-    block: DataApplicationBlock
+    block: DataApplicationBlock[SurveyUpdate]
   )(implicit context: L0NodeContext[F]): F[DataState[SurveyState, SurveyCalculatedState]] =
-    block.updates.map(_.signed.value).foldM(state) { (acc, update) =>
-      updateState(acc.state, acc.calculatedState, update).map { case (newState, newCalculatedState) =>
+    block.updates.foldM(state) { (acc, update) =>
+      updateState(acc.state, acc.calculatedState, update.value).map { case (newState, newCalculatedState) =>
         DataState(newState, newCalculatedState)
       }
     }
@@ -90,7 +77,7 @@ class SurveyL0Service[F[_]: Async](
   ): F[(SurveyState, SurveyCalculatedState)] = update match {
     case CreateSurvey(survey) =>
       for {
-        deductResult <- tokenService.deductFee(survey.creator, survey.tokenReward)
+        deductResult <- deductFee(survey.creator, survey.tokenReward)
         result <- deductResult match {
           case Right(_) =>
             val newState = state.copy(
@@ -103,7 +90,7 @@ class SurveyL0Service[F[_]: Async](
             )
             (newState, newCalculatedState).pure[F]
           case Left(error) =>
-            Async[F].raiseError[(SurveyState, SurveyCalculatedState)](new Exception(s"Failed to deduct fee: ${error.toString}"))
+            Async[F].raiseError[(SurveyState, SurveyCalculatedState)](new Exception(s"Failed to deduct fee: $error"))
         }
       } yield result
 
@@ -129,36 +116,31 @@ class SurveyL0Service[F[_]: Async](
       } yield (newState, newCalculatedState)
   }
 
-  private def calculateReward(survey: Survey, response: SurveyResponse): BigInt = {
-    val baseReward = survey.tokenReward / BigInt(survey.questions.size)
-    val completionPercentage = response.encryptedAnswers.length.toDouble / survey.questions.size
-    (baseReward * BigDecimal(completionPercentage)).toBigInt
-  }
+  private def deductFee(address: Address, amount: Long): F[Either[String, Unit]] =
+    apiClient.transfer(address, apiClient.getBurnAddress, TransactionAmount(amount)).attempt.map {
+      case Right(_) => Right(())
+      case Left(error) => Left(s"Failed to deduct fee: ${error.getMessage}")
+    }
 
   override def dataEncoder: Encoder[SurveyUpdate] = implicitly[Encoder[SurveyUpdate]]
   override def dataDecoder: Decoder[SurveyUpdate] = implicitly[Decoder[SurveyUpdate]]
-
   override def calculatedStateEncoder: Encoder[SurveyCalculatedState] = implicitly[Encoder[SurveyCalculatedState]]
   override def calculatedStateDecoder: Decoder[SurveyCalculatedState] = implicitly[Decoder[SurveyCalculatedState]]
 
-  // Retrieves the current calculated state
   override def getCalculatedState(implicit context: L0NodeContext[F]): F[(SnapshotOrdinal, SurveyCalculatedState)] =
     calculatedStateService.get.map(calculatedState => (calculatedState.ordinal, calculatedState.state))
 
-  // Sets a new calculated state
   override def setCalculatedState(
     ordinal: SnapshotOrdinal,
     state: SurveyCalculatedState
   )(implicit context: L0NodeContext[F]): F[Boolean] =
     calculatedStateService.set(ordinal, state)
 
-  // Computes a hash of the calculated state
   override def hashCalculatedState(
     state: SurveyCalculatedState
   )(implicit context: L0NodeContext[F]): F[Hash] =
     calculatedStateService.hash(state)
 
-  // Creates a snapshot of the current state
   override def takeSnapshot(lastSnapshotOrdinal: SnapshotOrdinal): F[SurveySnapshot] =
     calculatedStateService.get.map { calculatedState =>
       SurveySnapshot(
@@ -169,7 +151,6 @@ class SurveyL0Service[F[_]: Async](
       )
     }
 
-  // Validates a snapshot before applying it
   override def validateSnapshot(snapshot: SurveySnapshot): F[ValidatedNel[SnapshotValidationError, Unit]] =
     calculatedStateService.get.map { currentState =>
       if (snapshot.ordinal > currentState.ordinal) {
@@ -179,25 +160,22 @@ class SurveyL0Service[F[_]: Async](
       }
     }
 
-  // Applies a validated snapshot to update the current state
   override def applySnapshot(snapshot: SurveySnapshot): F[Unit] =
     calculatedStateService.applySnapshot(snapshot)
 
   def withCustomRoutes(customRoutes: CustomRoutes[F]): SurveyL0Service[F] = {
-    val combinedRoutes = customRoutes.public <+> HttpRoutes.empty[F] // L0 doesn't have default routes
-    new SurveyL0Service[F](calculatedStateService, tokenService, rateLimiter) {
+    val combinedRoutes = customRoutes.public <+> HttpRoutes.empty[F]
+    new SurveyL0Service[F](calculatedStateService, apiClient, rateLimiter) {
       override def routes(implicit context: L0NodeContext[F]): HttpRoutes[F] = combinedRoutes
     }
   }
-
 }
 
-// Companion object for creating instances of SurveyL0Service
 object SurveyL0Service {
   def make[F[_]: Async](
     calculatedStateService: CalculatedStateService[F],
-    tokenService: TokenService[F],
+    apiClient: ApiClient[F],
     rateLimiter: RateLimiter[F]
   ): F[SurveyL0Service[F]] =
-    Async[F].delay(new SurveyL0Service[F](calculatedStateService, tokenService, rateLimiter))
-
+    Async[F].delay(new SurveyL0Service[F](calculatedStateService, apiClient, rateLimiter))
+}

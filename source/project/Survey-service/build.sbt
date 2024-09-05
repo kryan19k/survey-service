@@ -52,7 +52,12 @@ lazy val sharedData = (project in file("modules/shared_data"))
     buildInfoPackage := "com.my.survey.shared_data",
     Defaults.itSettings,
     libraryDependencies ++= Seq(
-      Libraries.tessellationNodeShared
+      Libraries.tessellationNodeShared,
+      Libraries.circeCore,
+      Libraries.circeGeneric,
+      Libraries.circeParser,
+      Libraries.refined
+      
     )
   )
 

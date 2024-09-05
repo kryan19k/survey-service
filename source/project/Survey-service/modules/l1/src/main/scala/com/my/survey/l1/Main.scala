@@ -2,11 +2,12 @@ package com.my.survey.l1
 
 import cats.effect.{IO, Resource}
 import cats.syntax.option._
-import com.my.survey.shared_data.app.ApplicationConfigOps
-import com.my.survey.shared_data.calculated_state.CalculatedStateService
-import com.my.survey.shared_data.calculated_state.postgres.PostgresService
+import com.my.survey.shared_data.survey.shared_data.app.ApplicationConfigOps
+import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedStateService
+import com.my.survey.shared_data.survey.shared_data.calculated_state.postgres.PostgresService
 import com.my.survey.shared_data.types.codecs.JsonBinaryCodec
-import com.my.survey.shared_data.types.SurveySnapshot
+import com.my.survey.shared_data.survey.shared_data.types.SurveySnapshot
+import com.my.survey.shared_data.survey.shared_data.rate_limiter.RateLimiter
 import org.tessellation.BuildInfo
 import org.tessellation.currency.l1.CurrencyL1App
 import org.tessellation.ext.cats.effect.ResourceIO
@@ -31,10 +32,9 @@ object Main extends CurrencyL1App(
       dbCredentials = config.postgresDatabase
       postgresService <- PostgresService.make[IO](dbCredentials.url, dbCredentials.user, dbCredentials.password)
       calculatedStateService <- CalculatedStateService.make[IO](postgresService).asResource
-      tokenService <- TokenService.make[IO]().asResource
       rateLimiter <- RateLimiter.make[IO]().asResource
       logger <- Slf4jLogger.create[IO].asResource
-      surveyL1Service <- SurveyL1Service.make[IO](calculatedStateService, tokenService, rateLimiter, logger)
+      surveyL1Service <- SurveyL1Service.make[IO](calculatedStateService, rateLimiter, logger)
     } yield surveyL1Service).some
   }
 }

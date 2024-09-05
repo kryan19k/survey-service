@@ -6,7 +6,6 @@ import io.circe.syntax._
 import org.tessellation.currency.dataApplication.DataUpdate
 import org.tessellation.currency.dataApplication.dataApplication.DataApplicationBlock
 import org.tessellation.security.signature.Signed
-import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedState
 import com.my.survey.shared_data.survey.shared_data.types.SurveyState
 import com.my.survey.shared_data.survey.shared_data.types.SurveyCalculatedState
 

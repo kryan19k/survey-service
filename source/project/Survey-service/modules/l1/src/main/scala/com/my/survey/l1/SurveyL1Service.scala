@@ -1,16 +1,14 @@
 package com.my.survey.l1
 
-import cats.data.{EitherT, NonEmptyList, ValidatedNel}
+import cats.data.{EitherT, ValidatedNel}
 import cats.effect.Async
 import cats.syntax.all._
-import com.my.survey.shared_data.survey.shared_data._
 import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedStateService
-import com.my.survey.shared_data.survey.shared_data.encryption.Encryption
 import com.my.survey.shared_data.survey.shared_data.types._
-import com.my.survey.currency_l1.TokenService
 import com.my.survey.shared_data.survey.shared_data.rate_limiter.RateLimiter
 import com.my.survey.shared_data.survey.shared_data.errors.Errors._
 import com.my.survey.shared_data.survey.shared_data.validations.Validations
+import com.my.survey.shared_data.survey.shared_data.encryption.Encryption
 import io.circe.{Decoder, Encoder}
 import org.http4s.{HttpRoutes, Response}
 import org.http4s.dsl.Http4sDsl
@@ -22,7 +20,6 @@ import org.tessellation.schema.SnapshotOrdinal
 import org.tessellation.security.hash.Hash
 import org.tessellation.security.signature.Signed
 import org.tessellation.schema.address.Address
-import cats.data.Validated
 import org.typelevel.log4cats.Logger
 
 import java.time.Instant
@@ -30,7 +27,6 @@ import java.util.UUID
 
 class SurveyL1Service[F[_]: Async](
   calculatedStateService: CalculatedStateService[F],
-  tokenService: TokenService[F],
   rateLimiter: RateLimiter[F],
   logger: Logger[F]
 ) extends DataApplicationL1Service[F, SurveyUpdate, SurveyState, SurveyCalculatedState, SurveySnapshot]
@@ -38,7 +34,7 @@ class SurveyL1Service[F[_]: Async](
 
   def withCustomRoutes(customRoutes: CustomRoutes[F]): SurveyL1Service[F] = {
     val combinedRoutes = customRoutes.public <+> this.routes
-    new SurveyL1Service[F](calculatedStateService, tokenService, rateLimiter, logger) {
+    new SurveyL1Service[F](calculatedStateService, rateLimiter, logger) {
       override def routes(implicit context: L1NodeContext[F]): HttpRoutes[F] = combinedRoutes
     }
   }
@@ -46,15 +42,16 @@ class SurveyL1Service[F[_]: Async](
   override def validateData(
     state: DataState[SurveyState, SurveyCalculatedState],
     block: DataApplicationBlock[SurveyUpdate]
-  )(implicit context: L1NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] = {
-    // Implementation
-  }
+  )(implicit context: L1NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] =
+    block.updates.traverse_ { update =>
+      validateUpdate(update.value).leftMap(_.headOption.getOrElse("Unknown error"))
+    }
 
   override def validateUpdate(update: SurveyUpdate)(implicit context: L1NodeContext[F]): F[ValidatedNel[DataApplicationValidationError, Unit]] =
     Async[F].delay {
       update match {
-        case cs: CreateSurvey => Validations.createSurveyValidations(cs, None)
-        case sr: SubmitResponse => Validations.submitResponseValidations(sr, None)
+        case cs: CreateSurvey => Validations.createSurveyValidations(cs, Some(context.state.state))
+        case sr: SubmitResponse => Validations.submitResponseValidations(sr, Some(context.state.state))
       }
     }
 
@@ -166,8 +163,8 @@ class SurveyL1Service[F[_]: Async](
     }
   }
 
-  private def withdrawReward(address: Address, amount: BigInt): F[Either[Throwable, Unit]] =
-    tokenService.distributeReward(address, amount).attempt
+  private def withdrawReward(address: Address, amount: BigInt)(implicit context: L1NodeContext[F]): F[Either[Throwable, Unit]] =
+    context.transferHubTransaction(address, amount.toLong).attempt
 
   private def handleError(error: Throwable): F[Response[F]] = {
     val dsl = new Http4sDsl[F]{}
@@ -189,7 +186,7 @@ class SurveyL1Service[F[_]: Async](
       _ <- unrewardedSurveys.toList.traverse_ { case (surveyId, survey) =>
         for {
           _ <- logger.info(s"Survey $surveyId has ended with no responses. Returning rewards to creator.")
-          result <- tokenService.distributeReward(survey.creator, survey.tokenReward)
+          result <- context.transferHubTransaction(survey.creator, survey.tokenReward.toLong).attempt
           _ <- result match {
             case Right(_) => logger.info(s"Successfully returned ${survey.tokenReward} tokens to ${survey.creator}")
             case Left(error) => logger.error(s"Failed to return tokens to ${survey.creator}: $error")
@@ -245,9 +242,8 @@ class SurveyL1Service[F[_]: Async](
 object SurveyL1Service {
   def make[F[_]: Async](
     calculatedStateService: CalculatedStateService[F],
-    tokenService: TokenService[F],
     rateLimiter: RateLimiter[F],
     logger: Logger[F]
   ): F[SurveyL1Service[F]] =
-    Async[F].delay(new SurveyL1Service[F](calculatedStateService, tokenService, rateLimiter, logger))
+    Async[F].delay(new SurveyL1Service[F](calculatedStateService, rateLimiter, logger))
 }
