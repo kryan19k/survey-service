@@ -3,10 +3,11 @@ package com.my.survey.l1
 import cats.data.{EitherT, NonEmptyList, ValidatedNel}
 import cats.effect.Async
 import cats.syntax.all._
+import com.my.survey.shared_data._
 import com.my.survey.shared_data.calculated_state.CalculatedStateService
 import com.my.survey.shared_data.encryption.Encryption
 import com.my.survey.shared_data.types._
-import com.my.survey.shared_data.token.TokenService
+import com.my.survey.currency_l1.TokenService
 import com.my.survey.shared_data.rate_limiter.RateLimiter
 import com.my.survey.shared_data.errors.Errors._
 import com.my.survey.shared_data.validations.Validations
@@ -14,11 +15,12 @@ import io.circe.{Decoder, Encoder}
 import org.http4s.{HttpRoutes, Response}
 import org.http4s.dsl.Http4sDsl
 import org.tessellation.currency.dataApplication._
+import org.tessellation.currency.dataApplication.L1NodeContext
 import org.tessellation.currency.dataApplication.dataApplication.DataApplicationValidationErrorOr
+import org.tessellation.node.shared.domain.snapshot.{SnapshotOps, SnapshotValidationError}
 import org.tessellation.schema.SnapshotOrdinal
 import org.tessellation.security.hash.Hash
 import org.tessellation.security.signature.Signed
-import org.tessellation.node.shared.domain.snapshot.{SnapshotOps, SnapshotValidationError}
 import org.tessellation.schema.address.Address
 import cats.data.Validated
 import org.typelevel.log4cats.Logger
@@ -31,17 +33,22 @@ class SurveyL1Service[F[_]: Async](
   tokenService: TokenService[F],
   rateLimiter: RateLimiter[F],
   logger: Logger[F]
-) extends DataApplicationL1Service[F, SurveyUpdate, SurveyState, SurveyCalculatedState]
+) extends DataApplicationL1Service[F, SurveyUpdate, SurveyState, SurveyCalculatedState, SurveySnapshot]
   with SnapshotOps[F, SurveySnapshot] {
+
+  def withCustomRoutes(customRoutes: CustomRoutes[F]): SurveyL1Service[F] = {
+    val combinedRoutes = customRoutes.public <+> this.routes
+    new SurveyL1Service[F](calculatedStateService, tokenService, rateLimiter, logger) {
+      override def routes(implicit context: L1NodeContext[F]): HttpRoutes[F] = combinedRoutes
+    }
+  }
 
   override def validateData(
     state: DataState[SurveyState, SurveyCalculatedState],
-    updates: NonEmptyList[Signed[SurveyUpdate]]
-  )(implicit context: L1NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] =
-    updates.traverse_ { update =>
-      Validations.createSurveyValidationsWithSignature(update.value, context.proofAddresses, state)
-        .orElse(Validations.submitResponseValidationsWithSignature(update.value, context.proofAddresses, state))
-    }.pure[F]
+    block: DataApplicationBlock[SurveyUpdate]
+  )(implicit context: L1NodeContext[F]): F[DataApplicationValidationErrorOr[Unit]] = {
+    // Implementation
+  }
 
   override def validateUpdate(update: SurveyUpdate)(implicit context: L1NodeContext[F]): F[ValidatedNel[DataApplicationValidationError, Unit]] =
     Async[F].delay {
@@ -131,7 +138,7 @@ class SurveyL1Service[F[_]: Async](
       case GET -> Root / "rewards" / address =>
         (for {
           state <- EitherT.right(getCalculatedState)
-          addressObj <- EitherT.fromOption[F](Address.from(address), BadRequest(s"Invalid address: $address"))
+          addressObj <- EitherT.fromOption[F](Address.fromString(address), BadRequest(s"Invalid address: $address"))
           reward = state._2.rewards.getOrElse(addressObj, BigInt(0))
           response <- EitherT.right(Ok(s"Reward balance for $address: $reward"))
         } yield response).handleErrorWith(handleError)
@@ -139,7 +146,7 @@ class SurveyL1Service[F[_]: Async](
       case POST -> Root / "withdraw" / address =>
         (for {
           state <- EitherT.right(getCalculatedState)
-          addressObj <- EitherT.fromOption[F](Address.from(address), BadRequest(s"Invalid address: $address"))
+          addressObj <- EitherT.fromOption[F](Address.fromString(address), BadRequest(s"Invalid address: $address"))
           reward = state._2.rewards.getOrElse(addressObj, BigInt(0))
           _ <- EitherT.cond[F](reward > 0, (), BadRequest("No rewards available for withdrawal"))
           withdrawalResult <- EitherT(withdrawReward(addressObj, reward))

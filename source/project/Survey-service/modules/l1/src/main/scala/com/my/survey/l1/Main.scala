@@ -1,4 +1,4 @@
-package com.my.survey.data_l1
+package com.my.survey.l1
 
 import cats.effect.{IO, Resource}
 import cats.syntax.option._
@@ -15,6 +15,8 @@ import org.tessellation.json.JsonSerializer
 import org.tessellation.schema.cluster.ClusterId
 import org.tessellation.schema.semver.{MetagraphVersion, TessellationVersion}
 import org.tessellation.node.shared.domain.snapshot.SnapshotOps
+import com.my.survey.shared_data._
+
 
 import java.util.UUID
 
@@ -26,7 +28,7 @@ object Main extends CurrencyL1App(
   tessellationVersion = TessellationVersion.unsafeFrom(BuildInfo.version)
 ) {
   // This method sets up the data application
-  override def dataApplication: Option[Resource[IO, DataApplicationL1Service[IO] with SnapshotOps[IO, SurveySnapshot]]] = {
+  override def dataApplication: Option[Resource[IO, DataApplicationL1Service[IO, SurveyUpdate, SurveyState, SurveyCalculatedState] with SnapshotOps[IO, SurveySnapshot]]] = {
     (for {
       // Set up JSON serialization 
       implicit0(json2bin: JsonSerializer[IO]) <- JsonBinaryCodec.forSync[IO].asResource

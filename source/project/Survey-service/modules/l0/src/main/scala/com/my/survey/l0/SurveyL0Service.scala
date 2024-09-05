@@ -5,8 +5,10 @@ import cats.effect.Async
 import cats.syntax.all._
 import com.my.survey.shared_data.calculated_state.CalculatedStateService
 import com.my.survey.shared_data.types._
-import com.my.survey.shared_data.token.TokenService
+import com.my.survey.currency_l1.TokenService
 import com.mysurvey.metagraph.shared_data.ratelimit.RateLimiter
+import com.my.survey.shared_data.encryption.Encryption
+import com.my.survey.shared_data.types.{Survey, SurveyResponse}
 import io.circe.{Decoder, Encoder}
 import org.tessellation.currency.dataApplication._
 import org.tessellation.currency.dataApplication.dataApplication.{DataApplicationBlock, DataApplicationValidationErrorOr}
@@ -14,8 +16,7 @@ import org.tessellation.schema.SnapshotOrdinal
 import org.tessellation.security.hash.Hash
 import org.tessellation.security.signature.Signed
 import org.tessellation.node.shared.domain.snapshot.{SnapshotOps, SnapshotValidationError}
-import com.my.survey.shared_data.encryption.Encryption
-import com.my.survey.shared_data.types.{Survey, SurveyResponse}
+
 
 // SurveyL0Service is the main service class for handling survey operations in the L0 layer
 // It extends DataApplicationL0Service to integrate with the blockchain framework
@@ -177,6 +178,14 @@ class SurveyL0Service[F[_]: Async](
   // Applies a validated snapshot to update the current state
   override def applySnapshot(snapshot: SurveySnapshot): F[Unit] =
     calculatedStateService.applySnapshot(snapshot)
+
+  def withCustomRoutes(customRoutes: CustomRoutes[F]): SurveyL0Service[F] = {
+    val combinedRoutes = customRoutes.public <+> HttpRoutes.empty[F] // L0 doesn't have default routes
+    new SurveyL0Service[F](calculatedStateService, tokenService, rateLimiter) {
+      override def routes(implicit context: L0NodeContext[F]): HttpRoutes[F] = combinedRoutes
+    }
+  }
+
 }
 
 // Companion object for creating instances of SurveyL0Service
@@ -187,4 +196,4 @@ object SurveyL0Service {
     rateLimiter: RateLimiter[F]
   ): F[SurveyL0Service[F]] =
     Async[F].delay(new SurveyL0Service[F](calculatedStateService, tokenService, rateLimiter))
-}
+

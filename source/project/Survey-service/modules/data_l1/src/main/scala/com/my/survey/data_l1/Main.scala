@@ -1,6 +1,7 @@
 package com.my.survey.data_l1
 
 import cats.effect.{IO, Resource}
+
 import cats.syntax.option._
 import com.my.survey.shared_data.app.ApplicationConfigOps
 import com.my.survey.shared_data.calculated_state.CalculatedStateService
@@ -14,7 +15,8 @@ import org.tessellation.ext.cats.effect.ResourceIO
 import org.tessellation.json.JsonSerializer
 import org.tessellation.schema.cluster.ClusterId
 import org.tessellation.schema.semver.{MetagraphVersion, TessellationVersion}
-import org.tessellation.node.shared.domain.snapshot.SnapshotOps
+import org.tessellation.node.shared.snapshot.SnapshotOps
+
 
 import java.util.UUID
 

@@ -182,5 +182,5 @@ case class CustomRoutes[F[_] : Async](calculatedStateService: CalculatedStateSer
       .withAllowCredentials(false)
       .httpRoutes(routes)
 
-  override protected def prefixPath: InternalUrlPrefix = "/"
+   override protected def prefixPath: InternalUrlPrefix = InternalUrlPrefix.unsafe("/")
 }

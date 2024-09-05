@@ -1,11 +1,8 @@
 package com.my.survey.currency_l1
 
-
-
 import cats.effect.{Async, Ref}
 import cats.syntax.all._
 import org.tessellation.schema.address.Address
-import org.tessellation.schema.token.TokenSymbol
 import org.tessellation.security.error.TessellationError
 import org.tessellation.currency.l0.ApiClient
 import org.typelevel.log4cats.Logger

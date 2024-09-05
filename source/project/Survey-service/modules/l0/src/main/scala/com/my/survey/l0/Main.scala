@@ -8,7 +8,7 @@ import com.my.survey.shared_data.calculated_state.postgres.PostgresService
 import com.my.survey.shared_data.types.codecs.JsonBinaryCodec
 import com.my.survey.l0.custom_routes.CustomRoutes
 import com.my.survey.shared_data.types.SurveySnapshot
-import com.my.survey.shared_data.token.TokenService
+import com.my.survey.currency_l1.TokenService
 import com.my.survey.shared_data.ratelimit.RateLimiter
 import org.tessellation.BuildInfo
 import org.tessellation.currency.dataApplication._

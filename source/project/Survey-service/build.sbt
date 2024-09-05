@@ -32,8 +32,8 @@ lazy val root = (project in file("."))
   .settings(
     name := "survey-metagraph"
   )
-  .aggregate(sharedData, currencyL0, currencyL1, dataL1)
-
+  .aggregate(sharedData, l0, l1, dataL1, currencyL1)
+  
 lazy val sharedData = (project in file("modules/shared_data"))
   .enablePlugins(AshScriptPlugin, BuildInfoPlugin, JavaAppPackaging)
   .settings(
@@ -50,7 +50,7 @@ lazy val sharedData = (project in file("modules/shared_data"))
     )
   )
 
-lazy val currencyL0 = (project in file("modules/l0"))
+lazy val l0 = (project in file("modules/l0"))
   .enablePlugins(AshScriptPlugin, BuildInfoPlugin, JavaAppPackaging)
   .dependsOn(sharedData)
   .settings(
@@ -70,20 +70,23 @@ lazy val currencyL0 = (project in file("modules/l0"))
     )
   )
 
-lazy val currencyL1 = (project in file("modules/l1"))
+lazy val l1 = (project in file("modules/l1"))
   .enablePlugins(AshScriptPlugin, BuildInfoPlugin, JavaAppPackaging)
+  .dependsOn(sharedData)
   .settings(
-    name := "survey-currency-l1",
+    name := "survey-l1",
     scalacOptions ++= List("-Ymacro-annotations", "-Yrangepos", "-Wconf:cat=unused:info", "-language:reflectiveCalls"),
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
-    buildInfoPackage := "com.my.survey.currency_l1",
+    buildInfoPackage := "com.my.survey.l1",
     Defaults.itSettings,
     libraryDependencies ++= Seq(
       CompilerPlugin.kindProjector,
       CompilerPlugin.betterMonadicFor,
       CompilerPlugin.semanticDB,
       Libraries.tessellationCurrencyL1
-    )
+    ),
+    // Set a unique target directory for l1
+    target := file("target/l1")
   )
 
 lazy val dataL1 = (project in file("modules/data_l1"))
@@ -100,5 +103,33 @@ lazy val dataL1 = (project in file("modules/data_l1"))
       CompilerPlugin.betterMonadicFor,
       CompilerPlugin.semanticDB,
       Libraries.tessellationCurrencyL1
-    )
+    ),
+    // Set a unique target directory for dataL1
+    target := file("target/data_l1")
   )
+
+lazy val currencyL1 = (project in file("modules/currency_l1"))
+  .enablePlugins(AshScriptPlugin, BuildInfoPlugin, JavaAppPackaging)
+  .dependsOn(sharedData)
+  .settings(
+    name := "survey-currency-l1",
+    scalacOptions ++= List("-Ymacro-annotations", "-Yrangepos", "-Wconf:cat=unused:info", "-language:reflectiveCalls"),
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "com.my.survey.currency_l1",
+    Defaults.itSettings,
+    libraryDependencies ++= Seq(
+      CompilerPlugin.kindProjector,
+      CompilerPlugin.betterMonadicFor,
+      CompilerPlugin.semanticDB,
+      Libraries.tessellationCurrencyL1
+    ),
+    // Set a unique target directory for currencyL1
+    target := file("target/currency_l1")
+  )
+
+// Update the root project to include currencyL1
+lazy val root = (project in file("."))
+  .settings(
+    name := "survey-metagraph"
+  )
+  .aggregate(sharedData, l0, l1, dataL1, currencyL1)
