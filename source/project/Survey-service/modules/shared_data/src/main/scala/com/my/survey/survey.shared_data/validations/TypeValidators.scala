@@ -5,7 +5,7 @@ import org.tessellation.currency.dataApplication.DataState
 import org.tessellation.currency.dataApplication.dataApplication.DataApplicationValidationErrorOr
 import org.tessellation.schema.address.Address
 import com.my.survey.shared_data.survey.shared_data.types.{SurveyState, SurveyCalculatedState, CreateSurvey, SubmitResponse, SurveyResponse, Survey}
-import com.my.survey.shared_data.survey.shared_data.utils.isValidURL
+
 
 
 
@@ -15,7 +15,7 @@ import com.my.survey.shared_data.survey.shared_data.utils.isValidURL
 import java.time.Instant
 
 object TypeValidators {
-  private def getSurveyById(
+  def getSurveyById(
     surveyId: String,
     state: DataState[SurveyState, SurveyCalculatedState]
   ): Option[Survey] = {

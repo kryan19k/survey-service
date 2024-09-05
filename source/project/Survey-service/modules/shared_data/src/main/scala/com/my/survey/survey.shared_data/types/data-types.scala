@@ -3,7 +3,6 @@ package com.my.survey.shared_data.survey.shared_data.types
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto._
 import org.tessellation.schema.address.Address
-import org.tessellation.schema.SnapshotOrdinal
 import cats.data.ValidatedNel
 import org.tessellation.currency.dataApplication.DataApplicationValidationErrorOr
 import java.util.UUID
@@ -12,18 +11,6 @@ import java.time.Instant
 object SurveyTypes {
   type SurveyValidationResult[A] = ValidatedNel[DataApplicationValidationError, A]
   type SurveyDataApplicationValidationErrorOr[A] = DataApplicationValidationErrorOr[A]
-}
-
-case class SurveySnapshot(
-  ordinal: SnapshotOrdinal,
-  surveys: Map[String, Survey],
-  responses: Map[String, List[SurveyResponse]],
-  rewards: Map[String, BigInt]
-) extends Snapshot
-
-object SurveySnapshot {
-  implicit val encoder: Encoder[SurveySnapshot] = deriveEncoder
-  implicit val decoder: Decoder[SurveySnapshot] = deriveDecoder
 }
 
 case class Survey(
@@ -37,6 +24,7 @@ case class Survey(
   publicKey: String,
   status: SurveyStatus
 )
+
 sealed trait SurveyStatus
 case object Active extends SurveyStatus
 case object Completed extends SurveyStatus
@@ -47,13 +35,12 @@ object Survey {
   implicit val decoder: Decoder[Survey] = deriveDecoder
 }
 
-
 case class SurveyResponse(
   surveyId: UUID,
   respondent: Address,
-  encryptedAnswers: String, // Changed from 'answers' to 'encryptedAnswers'
-  earnedReward: BigInt, // Add earned reward for this response
-  submittedAt: Long // Add timestamp for sorting and analysis
+  encryptedAnswers: String,
+  earnedReward: BigInt,
+  submittedAt: Long
 )
 
 object SurveyResponse {
@@ -106,8 +93,6 @@ object SurveyCalculatedState {
   implicit val encoder: Encoder[SurveyCalculatedState] = deriveEncoder
   implicit val decoder: Decoder[SurveyCalculatedState] = deriveDecoder
 }
-
-
 
 sealed trait DataApplicationValidationError
 case class InvalidSurvey(reason: String) extends DataApplicationValidationError
