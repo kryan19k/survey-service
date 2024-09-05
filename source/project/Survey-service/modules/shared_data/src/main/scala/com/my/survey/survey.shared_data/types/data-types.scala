@@ -9,8 +9,10 @@ import org.tessellation.currency.dataApplication.DataApplicationValidationErrorO
 import java.util.UUID
 import java.time.Instant
 
-type SurveyValidationResult[A] = ValidatedNel[DataApplicationValidationError, A]
-type SurveyDataApplicationValidationErrorOr[A] = DataApplicationValidationErrorOr[A]
+object SurveyTypes {
+  type SurveyValidationResult[A] = ValidatedNel[DataApplicationValidationError, A]
+  type SurveyDataApplicationValidationErrorOr[A] = DataApplicationValidationErrorOr[A]
+}
 
 case class SurveySnapshot(
   ordinal: SnapshotOrdinal,

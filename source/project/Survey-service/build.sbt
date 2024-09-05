@@ -28,43 +28,67 @@ ThisBuild / credentials += Credentials(
   sys.env.getOrElse("GITHUB_TOKEN", "")
 )
 
+lazy val commonSettings = Seq(
+  scalacOptions ++= List("-Ymacro-annotations", "-Yrangepos", "-Wconf:cat=unused:info", "-language:reflectiveCalls"),
+  libraryDependencies ++= Seq(
+    CompilerPlugin.kindProjector,
+    CompilerPlugin.betterMonadicFor,
+    CompilerPlugin.semanticDB
+  )
+)
+
 lazy val root = (project in file("."))
   .settings(
     name := "survey-metagraph"
   )
-  .aggregate(sharedData, l1, dataL1, currencyL1)
-  
+  .aggregate(sharedData, currencyL0, currencyL1, dataL1)
+
 lazy val sharedData = (project in file("modules/shared_data"))
   .enablePlugins(AshScriptPlugin, BuildInfoPlugin, JavaAppPackaging)
+  .settings(commonSettings)
   .settings(
     name := "survey-shared_data",
-    scalacOptions ++= List("-Ymacro-annotations", "-Yrangepos", "-Wconf:cat=unused:info", "-language:reflectiveCalls"),
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.my.survey.shared_data",
     Defaults.itSettings,
     libraryDependencies ++= Seq(
-      CompilerPlugin.kindProjector,
-      CompilerPlugin.betterMonadicFor,
-      CompilerPlugin.semanticDB,
       Libraries.tessellationNodeShared
     )
   )
 
-
-
-lazy val l1 = (project in file("modules/l1"))
+lazy val currencyL0 = (project in file("modules/l0"))
   .enablePlugins(AshScriptPlugin, BuildInfoPlugin, JavaAppPackaging)
   .dependsOn(sharedData)
+  .settings(commonSettings)
   .settings(
-    name := "survey-l1",
-    scalacOptions ++= List("-Ymacro-annotations", "-Yrangepos", "-Wconf:cat=unused:info", "-language:reflectiveCalls"),
+    name := "survey-currency-l0",
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "com.my.survey.l0",
+    Defaults.itSettings,
+    libraryDependencies ++= Seq(
+      Libraries.declineRefined,
+      Libraries.declineCore,
+      Libraries.declineEffect,
+      Libraries.tessellationNodeShared,
+      Libraries.tessellationCurrencyL0,
+      Libraries.http4sCore,
+      Libraries.http4sDsl,
+      Libraries.http4sServer,
+      Libraries.http4sClient,
+      Libraries.http4sCirce
+    )
+  )
+
+lazy val currencyL1 = (project in file("modules/l1"))
+  .enablePlugins(AshScriptPlugin, BuildInfoPlugin, JavaAppPackaging)
+  .dependsOn(sharedData)
+  .settings(commonSettings)
+  .settings(
+    name := "survey-currency-l1",
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.my.survey.l1",
     Defaults.itSettings,
     libraryDependencies ++= Seq(
-      CompilerPlugin.kindProjector,
-      CompilerPlugin.betterMonadicFor,
-      CompilerPlugin.semanticDB,
       Libraries.tessellationCurrencyL1
     ),
     // Set a unique target directory for l1
@@ -74,37 +98,17 @@ lazy val l1 = (project in file("modules/l1"))
 lazy val dataL1 = (project in file("modules/data_l1"))
   .enablePlugins(AshScriptPlugin, BuildInfoPlugin, JavaAppPackaging)
   .dependsOn(sharedData)
+  .settings(commonSettings)
   .settings(
     name := "survey-data_l1",
-    scalacOptions ++= List("-Ymacro-annotations", "-Yrangepos", "-Wconf:cat=unused:info", "-language:reflectiveCalls"),
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.my.survey.data_l1",
     Defaults.itSettings,
     libraryDependencies ++= Seq(
-      CompilerPlugin.kindProjector,
-      CompilerPlugin.betterMonadicFor,
-      CompilerPlugin.semanticDB,
       Libraries.tessellationCurrencyL1
     ),
-    // Set a unique target directory for dataL1
+    // Set a unique target directory for data_l1
     target := file("target/data_l1")
   )
 
-lazy val currencyL1 = (project in file("modules/currency_l1"))
-  .enablePlugins(AshScriptPlugin, BuildInfoPlugin, JavaAppPackaging)
-  .dependsOn(sharedData)
-  .settings(
-    name := "survey-currency-l1",
-    scalacOptions ++= List("-Ymacro-annotations", "-Yrangepos", "-Wconf:cat=unused:info", "-language:reflectiveCalls"),
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
-    buildInfoPackage := "com.my.survey.currency_l1",
-    Defaults.itSettings,
-    libraryDependencies ++= Seq(
-      CompilerPlugin.kindProjector,
-      CompilerPlugin.betterMonadicFor,
-      CompilerPlugin.semanticDB,
-      Libraries.tessellationCurrencyL1
-    ),
-    // Set a unique target directory for currencyL1
-    target := file("target/currency_l1")
-  )
+
