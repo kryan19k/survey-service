@@ -1,6 +1,6 @@
-package com.my.survey.shared_data.combiners
+package com.my.survey.shared_data.survey.shared_data.combiners
 
-import com.my.survey.shared_data.serializers.Serializers
+import com.my.survey.shared_data.survey.shared_data.serializers.Serializers
 import com.my.survey.shared_data.types._
 import monocle.Monocle.toAppliedFocusOps
 import org.tessellation.currency.dataApplication.DataState

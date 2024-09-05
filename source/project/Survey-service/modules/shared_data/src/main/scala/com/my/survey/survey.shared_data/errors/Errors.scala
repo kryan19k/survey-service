@@ -1,4 +1,4 @@
-package com.my.survey.shared_data.errors
+package com.my.survey.shared_data.survey.shared_data.errors
 
 import cats.data.ValidatedNec
 import cats.syntax.validated._

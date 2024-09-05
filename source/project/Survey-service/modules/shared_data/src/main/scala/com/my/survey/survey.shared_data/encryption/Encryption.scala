@@ -1,4 +1,4 @@
-package com.my.survey.shared_data.encryption
+package com.my.survey.shared_data.survey.shared_data.encryption
 
 import cats.effect.Sync
 import org.bouncycastle.jce.provider.BouncyCastleProvider

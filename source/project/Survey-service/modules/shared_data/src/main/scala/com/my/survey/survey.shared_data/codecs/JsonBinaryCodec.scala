@@ -1,4 +1,4 @@
-package com.my.survey.shared_data.types.codecs
+package com.my.survey.shared_data.survey.shared_data.codecs
 
 import cats.effect.Sync
 import io.circe.{Decoder, Encoder}

@@ -3,12 +3,12 @@ package com.my.survey.l0
 import cats.data.{NonEmptyList, ValidatedNel}
 import cats.effect.Async
 import cats.syntax.all._
-import com.my.survey.shared_data.calculated_state.CalculatedStateService
-import com.my.survey.shared_data.types._
-import com.my.survey.currency_l1.TokenService
-import com.mysurvey.metagraph.shared_data.ratelimit.RateLimiter
-import com.my.survey.shared_data.encryption.Encryption
-import com.my.survey.shared_data.types.{Survey, SurveyResponse}
+import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedStateService
+import com.my.survey.shared_data.survey.shared_data.types._
+import com.my.survey.shared_data.survey.shared_data.token.TokenService
+import com.my.survey.shared_data.survey.shared_data.rate_limiter.RateLimiter
+import com.my.survey.shared_data.survey.shared_data.encryption.Encryption
+import com.my.survey.shared_data.survey.shared_data.types.{Survey, SurveyResponse}
 import io.circe.{Decoder, Encoder}
 import org.tessellation.currency.dataApplication._
 import org.tessellation.currency.dataApplication.dataApplication.{DataApplicationBlock, DataApplicationValidationErrorOr}

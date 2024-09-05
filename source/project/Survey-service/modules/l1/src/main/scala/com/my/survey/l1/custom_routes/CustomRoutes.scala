@@ -2,8 +2,8 @@ package com.my.survey.l1.custom_routes
 
 import cats.effect.Async
 import cats.syntax.all._
-import com.my.survey.shared_data.calculated_state.CalculatedStateService
-import com.my.survey.shared_data.types._
+import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedStateService
+import com.my.survey.shared_data.survey.shared_data.types._
 import io.circe.syntax._
 import org.http4s._
 import org.http4s.circe._

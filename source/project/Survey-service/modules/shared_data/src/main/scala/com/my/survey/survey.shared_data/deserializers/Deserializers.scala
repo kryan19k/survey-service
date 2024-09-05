@@ -1,6 +1,6 @@
-package com.my.survey.shared_data.deserializers
+package com.my.survey.shared_data.survey.shared_data.deserializers
 
-import com.my.survey.shared_data.types._
+import com.my.survey.shared_data.survey.shared_data.types._
 import io.circe.Decoder
 import io.circe.jawn.decode
 import org.tessellation.currency.dataApplication.DataUpdate

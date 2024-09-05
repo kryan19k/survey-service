@@ -1,4 +1,4 @@
-package com.my.survey.currency_l1
+package com.my.survey.shared_data.survey.shared_data
 
 import cats.effect.{Async, Ref}
 import cats.syntax.all._

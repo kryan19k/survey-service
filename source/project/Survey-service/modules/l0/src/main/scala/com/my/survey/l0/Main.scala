@@ -2,14 +2,14 @@ package com.my.survey.l0
 
 import cats.effect.{IO, Resource}
 import cats.syntax.option._
-import com.my.survey.shared_data.app.ApplicationConfigOps
-import com.my.survey.shared_data.calculated_state.CalculatedStateService
-import com.my.survey.shared_data.calculated_state.postgres.PostgresService
+import com.my.survey.shared_data.survey.shared_data.app.ApplicationConfigOps
+import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedStateService
+import com.my.survey.shared_data.survey.shared_data.calculated_state.postgres.PostgresService
 import com.my.survey.shared_data.types.codecs.JsonBinaryCodec
 import com.my.survey.l0.custom_routes.CustomRoutes
-import com.my.survey.shared_data.types.SurveySnapshot
-import com.my.survey.currency_l1.TokenService
-import com.my.survey.shared_data.ratelimit.RateLimiter
+import com.my.survey.shared_data.survey.shared_data.types.SurveySnapshot
+import com.my.survey.shared_data.survey.shared_data.token.TokenService
+import com.my.survey.shared_data.survey.shared_data.rate_limiter.RateLimiter
 import org.tessellation.BuildInfo
 import org.tessellation.currency.dataApplication._
 import org.tessellation.currency.l0.CurrencyL0App

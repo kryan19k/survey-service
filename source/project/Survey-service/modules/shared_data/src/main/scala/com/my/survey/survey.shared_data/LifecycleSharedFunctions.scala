@@ -1,12 +1,12 @@
-package com.my.survey.shared_data
+package com.my.survey.shared_data.survey.shared_data
 
 import cats.data.NonEmptyList
 import cats.effect.Async
 import cats.syntax.all._
-import com.my.survey.shared_data.Utils._
-import com.my.survey.shared_data.combiners.Combiners._
-import com.my.survey.shared_data.types._
-import com.my.survey.shared_data.validations.Validations._
+import com.my.survey.shared_data.survey.shared_data.utils.Utils._
+import com.my.survey.shared_data.survey.shared_data.combiners.Combiners._
+import com.my.survey.shared_data.survey.shared_data.types._
+import com.my.survey.shared_data.survey.shared_data.validations.Validations._
 import org.tessellation.currency.dataApplication.dataApplication.DataApplicationValidationErrorOr
 import org.tessellation.currency.dataApplication.{DataState, L0NodeContext}
 import org.tessellation.security.SecurityProvider

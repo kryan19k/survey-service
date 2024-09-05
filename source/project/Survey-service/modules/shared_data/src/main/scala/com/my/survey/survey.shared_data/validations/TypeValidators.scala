@@ -1,11 +1,11 @@
-package com.my.survey.shared_data.validations
+package com.my.survey.shared_data.survey.shared_data.validations
 
-import com.my.survey.shared_data.errors.Errors._
+import com.my.survey.shared_data.survey.shared_data.errors.Errors._
 import org.tessellation.currency.dataApplication.DataState
 import org.tessellation.currency.dataApplication.dataApplication.DataApplicationValidationErrorOr
 import org.tessellation.schema.address.Address
-import com.my.survey.shared_data.types.{SurveyState, SurveyCalculatedState, CreateSurvey, SubmitResponse, SurveyResponse, Survey}
-import com.my.survey.shared_data.utils.isValidURL
+import com.my.survey.shared_data.survey.shared_data.types.{SurveyState, SurveyCalculatedState, CreateSurvey, SubmitResponse, SurveyResponse, Survey}
+import com.my.survey.shared_data.survey.shared_data.utils.isValidURL
 
 
 

@@ -2,9 +2,9 @@ package com.my.survey.l0.custom_routes
 
 import cats.effect.Async
 import cats.syntax.all._
-import com.my.survey.shared_data.calculated_state.CalculatedStateService
-import com.my.survey.shared_data.types.States._
-import com.my.survey.shared_data.types.Updates._
+import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedStateService
+import com.my.survey.shared_data.survey.shared_data.types.States._
+import com.my.survey.shared_data.survey.shared_data.types.Updates._
 import derevo.circe.magnolia.{decoder, encoder}
 import derevo.derive
 import io.circe.generic.auto._

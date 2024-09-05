@@ -1,4 +1,4 @@
-package com.my.survey.shared_data.types
+package com.my.survey.shared_data.survey.shared_data.types
 
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto._

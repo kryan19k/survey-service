@@ -3,14 +3,14 @@ package com.my.survey.l1
 import cats.data.{EitherT, NonEmptyList, ValidatedNel}
 import cats.effect.Async
 import cats.syntax.all._
-import com.my.survey.shared_data._
-import com.my.survey.shared_data.calculated_state.CalculatedStateService
-import com.my.survey.shared_data.encryption.Encryption
-import com.my.survey.shared_data.types._
+import com.my.survey.shared_data.survey.shared_data._
+import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedStateService
+import com.my.survey.shared_data.survey.shared_data.encryption.Encryption
+import com.my.survey.shared_data.survey.shared_data.types._
 import com.my.survey.currency_l1.TokenService
-import com.my.survey.shared_data.rate_limiter.RateLimiter
-import com.my.survey.shared_data.errors.Errors._
-import com.my.survey.shared_data.validations.Validations
+import com.my.survey.shared_data.survey.shared_data.rate_limiter.RateLimiter
+import com.my.survey.shared_data.survey.shared_data.errors.Errors._
+import com.my.survey.shared_data.survey.shared_data.validations.Validations
 import io.circe.{Decoder, Encoder}
 import org.http4s.{HttpRoutes, Response}
 import org.http4s.dsl.Http4sDsl
