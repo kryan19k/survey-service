@@ -1,10 +1,9 @@
 package com.my.survey.shared_data.survey.shared_data.types
 
-import io.circe.{Decoder, Encoder}
+import io.circe.{Decoder, Encoder, HCursor, Json, DecodingFailure}
 import io.circe.generic.semiauto._
 import org.tessellation.schema.address.Address
 import cats.data.ValidatedNel
-import org.tessellation.currency.dataApplication.DataApplicationValidationErrorOr
 import java.util.UUID
 import java.time.Instant
 
@@ -31,8 +30,8 @@ case object Completed extends SurveyStatus
 case object Cancelled extends SurveyStatus
 
 object Survey {
-  implicit val encoder: Encoder[Survey] = deriveEncoder
-  implicit val decoder: Decoder[Survey] = deriveDecoder
+  implicit val encoder: Encoder[Survey] = deriveEncoder[Survey]
+  implicit val decoder: Decoder[Survey] = deriveDecoder[Survey]
 }
 
 case class SurveyResponse(
@@ -44,8 +43,8 @@ case class SurveyResponse(
 )
 
 object SurveyResponse {
-  implicit val encoder: Encoder[SurveyResponse] = deriveEncoder
-  implicit val decoder: Decoder[SurveyResponse] = deriveDecoder
+  implicit val encoder: Encoder[SurveyResponse] = deriveEncoder[SurveyResponse]
+  implicit val decoder: Decoder[SurveyResponse] = deriveDecoder[SurveyResponse]
 }
 
 case class SurveyState(
@@ -55,8 +54,8 @@ case class SurveyState(
 )
 
 object SurveyState {
-  implicit val encoder: Encoder[SurveyState] = deriveEncoder
-  implicit val decoder: Decoder[SurveyState] = deriveDecoder
+  implicit val encoder: Encoder[SurveyState] = deriveEncoder[SurveyState]
+  implicit val decoder: Decoder[SurveyState] = deriveDecoder[SurveyState]
 }
 
 sealed trait SurveyUpdate
@@ -64,20 +63,32 @@ case class CreateSurvey(survey: Survey) extends SurveyUpdate
 case class SubmitResponse(response: SurveyResponse) extends SurveyUpdate
 
 object SurveyUpdate {
-  implicit val encoder: Encoder[SurveyUpdate] = {
-    case cs: CreateSurvey => Encoder[CreateSurvey].apply(cs)
-    case sr: SubmitResponse => Encoder[SubmitResponse].apply(sr)
+  implicit val encoder: Encoder[SurveyUpdate] = new Encoder[SurveyUpdate] {
+    final def apply(a: SurveyUpdate): Json = a match {
+      case cs: CreateSurvey => Json.obj(
+        ("type", Json.fromString("CreateSurvey")),
+        ("survey", Encoder[Survey].apply(cs.survey))
+      )
+      case sr: SubmitResponse => Json.obj(
+        ("type", Json.fromString("SubmitResponse")),
+        ("response", Encoder[SurveyResponse].apply(sr.response))
+      )
+    }
   }
-  implicit val decoder: Decoder[SurveyUpdate] =
-    List[Decoder[SurveyUpdate]](
-      Decoder[CreateSurvey].widen,
-      Decoder[SubmitResponse].widen
-    ).reduceLeft(_ or _)
 
-  implicit val createSurveyEncoder: Encoder[CreateSurvey] = deriveEncoder
-  implicit val createSurveyDecoder: Decoder[CreateSurvey] = deriveDecoder
-  implicit val submitResponseEncoder: Encoder[SubmitResponse] = deriveEncoder
-  implicit val submitResponseDecoder: Decoder[SubmitResponse] = deriveDecoder
+  implicit val decoder: Decoder[SurveyUpdate] = new Decoder[SurveyUpdate] {
+    final def apply(c: HCursor): Decoder.Result[SurveyUpdate] = 
+      c.downField("type").as[String].flatMap {
+        case "CreateSurvey" => c.downField("survey").as[Survey].map(CreateSurvey)
+        case "SubmitResponse" => c.downField("response").as[SurveyResponse].map(SubmitResponse)
+        case _ => Left(DecodingFailure("Unknown SurveyUpdate type", c.history))
+      }
+  }
+
+  implicit val createSurveyEncoder: Encoder[CreateSurvey] = deriveEncoder[CreateSurvey]
+  implicit val createSurveyDecoder: Decoder[CreateSurvey] = deriveDecoder[CreateSurvey]
+  implicit val submitResponseEncoder: Encoder[SubmitResponse] = deriveEncoder[SubmitResponse]
+  implicit val submitResponseDecoder: Decoder[SubmitResponse] = deriveDecoder[SubmitResponse]
 }
 
 case class SurveyCalculatedState(
@@ -90,8 +101,8 @@ case class SurveyCalculatedState(
 )
 
 object SurveyCalculatedState {
-  implicit val encoder: Encoder[SurveyCalculatedState] = deriveEncoder
-  implicit val decoder: Decoder[SurveyCalculatedState] = deriveDecoder
+  implicit val encoder: Encoder[SurveyCalculatedState] = deriveEncoder[SurveyCalculatedState]
+  implicit val decoder: Decoder[SurveyCalculatedState] = deriveDecoder[SurveyCalculatedState]
 }
 
 sealed trait DataApplicationValidationError
@@ -99,6 +110,6 @@ case class InvalidSurvey(reason: String) extends DataApplicationValidationError
 case class InvalidResponse(reason: String) extends DataApplicationValidationError
 
 object DataApplicationValidationError {
-  implicit val encoder: Encoder[DataApplicationValidationError] = deriveEncoder
-  implicit val decoder: Decoder[DataApplicationValidationError] = deriveDecoder
+  implicit val encoder: Encoder[DataApplicationValidationError] = deriveEncoder[DataApplicationValidationError]
+  implicit val decoder: Decoder[DataApplicationValidationError] = deriveDecoder[DataApplicationValidationError]
 }

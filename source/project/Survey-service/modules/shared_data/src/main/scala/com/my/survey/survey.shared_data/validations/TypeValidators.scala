@@ -5,18 +5,13 @@ import org.tessellation.currency.dataApplication.DataState
 import org.tessellation.currency.dataApplication.dataApplication.DataApplicationValidationErrorOr
 import org.tessellation.schema.address.Address
 import com.my.survey.shared_data.survey.shared_data.types.{SurveyState, SurveyCalculatedState, CreateSurvey, SubmitResponse, SurveyResponse, Survey}
-
-
-
-
-
-
-
+import java.util.UUID
 import java.time.Instant
+import java.net.{URL, MalformedURLException}
 
 object TypeValidators {
   def getSurveyById(
-    surveyId: String,
+    surveyId: UUID,
     state: DataState[SurveyState, SurveyCalculatedState]
   ): Option[Survey] = {
     state.calculated.surveys.get(surveyId)
@@ -54,11 +49,11 @@ object TypeValidators {
     update: CreateSurvey,
     state: DataState[SurveyState, SurveyCalculatedState]
   ): DataApplicationValidationErrorOr[Unit] = {
-    DuplicatedSurvey.whenA(state.calculated.surveys.contains(update.id))
+    DuplicatedSurvey.whenA(state.calculated.surveys.contains(update.survey.id))
   }
 
   def validateIfSurveyExists(
-    surveyId: String,
+    surveyId: UUID,  // Change the type to UUID
     state: DataState[SurveyState, SurveyCalculatedState]
   ): DataApplicationValidationErrorOr[Unit] =
     SurveyNotExists.unlessA(state.calculated.surveys.contains(surveyId))
@@ -78,8 +73,9 @@ object TypeValidators {
     getSurveyById(response.surveyId, state)
       .map { survey =>
         InvalidResponseFormat.unlessA(
-          survey.questions.size == response.answers.size &&
-          response.answers.forall(answer => survey.questions.exists(_.id == answer.questionId))
+          response.encryptedAnswers.nonEmpty &&
+          Instant.ofEpochMilli(response.submittedAt).isAfter(survey.createdAt) &&
+          Instant.ofEpochMilli(response.submittedAt).isBefore(survey.endTime)
         )
       }
       .getOrElse(SurveyNotExists.invalid)
@@ -103,4 +99,13 @@ object TypeValidators {
     fieldName: String
   ): DataApplicationValidationErrorOr[Unit] =
     InvalidFieldSize(fieldName, maxSize).whenA(value.size > maxSize)
+
+  private def isValidURL(url: String): Boolean = {
+    try {
+      new URL(url)
+      true
+    } catch {
+      case _: MalformedURLException => false
+    }
+  }
 }
