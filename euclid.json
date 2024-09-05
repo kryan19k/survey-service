@@ -1,5 +1,5 @@
 {
-  "github_token": "",
+  "github_token": "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",
   "version": "0.13.0",
   "tessellation_version": "2.8.0",
   "ref_type": "tag",
@@ -14,9 +14,9 @@
   },
   "layers": [
     "global-l0",
-    "metagraph-survey-l0",
-    "currency-l1",
-    "data-l1"
+    "survey-l0",
+    "survey-currency-l1",
+    "survey-data-l1"
   ],
   "nodes": [
     {

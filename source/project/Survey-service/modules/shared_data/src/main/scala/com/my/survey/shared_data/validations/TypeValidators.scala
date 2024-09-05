@@ -1,13 +1,16 @@
 package com.my.survey.shared_data.validations
 
-import com.my.survey.shared_data.Utils.isValidURL
 import com.my.survey.shared_data.errors.Errors._
-import com.my.survey.shared_data.serializers.Serializers
-import com.my.survey.shared_data.types._
 import org.tessellation.currency.dataApplication.DataState
 import org.tessellation.currency.dataApplication.dataApplication.DataApplicationValidationErrorOr
 import org.tessellation.schema.address.Address
-import org.tessellation.security.hash.Hash
+import com.my.survey.shared_data.types.{SurveyState, SurveyCalculatedState, CreateSurvey, SubmitResponse, SurveyResponse, Survey}
+import com.my.survey.shared_data.utils.isValidURL
+
+
+
+
+
 
 import java.time.Instant
 
@@ -19,7 +22,7 @@ object TypeValidators {
     state.calculated.surveys.get(surveyId)
   }
 
-   def validateTokenReward(reward: BigInt): DataApplicationValidationErrorOr[Unit] =
+  def validateTokenReward(reward: BigInt): DataApplicationValidationErrorOr[Unit] =
     InvalidTokenReward.unlessA(reward > 0)
 
   def validateImageUri(uri: String): DataApplicationValidationErrorOr[Unit] =
@@ -38,7 +41,7 @@ object TypeValidators {
     InvalidEarnedReward.unlessA(earned >= 0 && earned <= state.calculated.totalRewardsDistributed)
 
   def validateSubmissionTime(
-    submitted: Long,
+  submitted: Long,
     state: DataState[SurveyState, SurveyCalculatedState]
   ): DataApplicationValidationErrorOr[Unit] =
     InvalidSubmissionTime.unlessA(
@@ -46,14 +49,12 @@ object TypeValidators {
         submitted >= survey.createdAt.toEpochMilli && submitted <= survey.endTime.toEpochMilli
       )
     )
-}
 
   def validateIfSurveyIsUnique(
     update: CreateSurvey,
     state: DataState[SurveyState, SurveyCalculatedState]
   ): DataApplicationValidationErrorOr[Unit] = {
-    val surveyId = Hash.fromBytes(Serializers.serializeUpdate(update)).toString
-    DuplicatedSurvey.whenA(state.calculated.surveys.contains(surveyId))
+    DuplicatedSurvey.whenA(state.calculated.surveys.contains(update.id))
   }
 
   def validateIfSurveyExists(

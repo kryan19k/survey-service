@@ -16,6 +16,10 @@ import org.tessellation.schema.SnapshotOrdinal
 import org.tessellation.security.hash.Hash
 import org.tessellation.security.signature.Signed
 import org.tessellation.node.shared.domain.snapshot.{SnapshotOps, SnapshotValidationError}
+import com.my.survey.shared_data.validations.TypeValidators
+import com.my.survey.shared_data.validations.Validations
+
+
 
 
 // SurveyL0Service is the main service class for handling survey operations in the L0 layer

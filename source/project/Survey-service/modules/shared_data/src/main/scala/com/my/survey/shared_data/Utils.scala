@@ -1,4 +1,4 @@
-package com.my.nft.shared_data
+package com.my.survey.shared_data
 
 import cats.data.NonEmptySet
 import cats.effect.Async

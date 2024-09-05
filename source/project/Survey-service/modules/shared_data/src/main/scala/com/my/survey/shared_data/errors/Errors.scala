@@ -2,7 +2,8 @@ package com.my.survey.shared_data.errors
 
 import cats.data.ValidatedNec
 import cats.syntax.validated._
-import org.tessellation.currency.dataApplication.dataApplication.DataApplicationValidationError
+import org.tessellation.currency.dataApplication._
+
 
 object Errors {
   type DataApplicationValidationType = ValidatedNec[DataApplicationValidationError, Unit]
