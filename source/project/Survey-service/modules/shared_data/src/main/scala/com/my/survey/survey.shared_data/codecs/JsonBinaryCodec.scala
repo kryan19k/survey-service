@@ -1,17 +1,32 @@
 package com.my.survey.shared_data.survey.shared_data.codecs
 
 import cats.effect.Sync
-import io.circe.{Decoder, Encoder}
+import cats.implicits.toFunctorOps
+import io.circe.jawn.JawnParser
+import io.circe.syntax.EncoderOps
+import io.circe.{Decoder, Encoder, Printer}
 import org.tessellation.json.JsonSerializer
 
 object JsonBinaryCodec {
-  def forSync[F[_]: Sync]: F[JsonSerializer[F]] = Sync[F].delay {
-    new JsonSerializer[F] {
-      def serialize[A: Encoder](a: A): F[Array[Byte]] =
-        Sync[F].delay(io.circe.jawn.stringify(Encoder[A].apply(a)).getBytes)
 
-      def deserialize[A: Decoder](bytes: Array[Byte]): F[A] =
-        Sync[F].fromEither(io.circe.jawn.decode[A](new String(bytes)))
-    }
+  def apply[F[_]: JsonSerializer]: JsonSerializer[F] = implicitly
+
+  def forSync[F[_]: Sync]: F[JsonSerializer[F]] = {
+    def printer = Printer(dropNullValues = true, indent = "", sortKeys = true)
+
+    forSync[F](printer)
   }
+
+  def forSync[F[_]: Sync](printer: Printer): F[JsonSerializer[F]] =
+    Sync[F].delay {
+      new JsonSerializer[F] {
+        override def serialize[A: Encoder](content: A): F[Array[Byte]] =
+          Sync[F].delay(content.asJson.printWith(printer).getBytes("UTF-8"))
+
+        override def deserialize[A: Decoder](content: Array[Byte]): F[Either[Throwable, A]] =
+          Sync[F]
+            .delay(content)
+            .map(JawnParser(false).decodeByteArray[A](_))
+      }
+    }
 }

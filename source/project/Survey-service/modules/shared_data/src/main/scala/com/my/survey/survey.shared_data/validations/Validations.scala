@@ -3,14 +3,11 @@ package com.my.survey.shared_data.survey.shared_data.validations
 import cats.syntax.all._
 import cats.syntax.option._
 import com.my.survey.shared_data.survey.shared_data.errors.Errors._
+import com.my.survey.shared_data.survey.shared_data.types.{CreateSurvey, SubmitResponse, SurveyCalculatedState, SurveyState}
 import com.my.survey.shared_data.survey.shared_data.validations.TypeValidators._
 import org.tessellation.currency.dataApplication.DataState
 import org.tessellation.currency.dataApplication.dataApplication.DataApplicationValidationErrorOr
 import org.tessellation.schema.address.Address
-
-
-
-
 
 object Validations {
   def createSurveyValidations(

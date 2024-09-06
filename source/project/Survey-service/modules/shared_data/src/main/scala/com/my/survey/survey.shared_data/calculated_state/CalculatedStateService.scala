@@ -21,7 +21,7 @@ trait CalculatedStateService[F[_]] {
   def get: F[CalculatedState]
   def set(ordinal: SnapshotOrdinal, state: SurveyCalculatedState): F[Boolean]
   def update(f: CalculatedState => CalculatedState): F[CalculatedState]
-  def hash(state: SurveyCalculatedState)(implicit hs: HashSelect): F[Hash]
+  def hash(state: SurveyCalculatedState): F[Hash]
   def applySnapshot(snapshot: SurveySnapshot): F[Unit]
 }
 
@@ -50,7 +50,7 @@ object CalculatedStateService {
         def update(f: CalculatedState => CalculatedState): F[CalculatedState] =
           ref.updateAndGet(f).flatTap(newState => postgresService.saveState(newState))
 
-        def hash(state: SurveyCalculatedState)(implicit hs: HashSelect): F[Hash] =
+        def hash(state: SurveyCalculatedState): F[Hash] =
           Async[F].delay {
             import java.security.MessageDigest
             val serializedState = io.circe.Encoder[SurveyCalculatedState].apply(state).noSpaces
