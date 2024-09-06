@@ -1,7 +1,7 @@
 package com.my.survey.shared_data.survey.shared_data.combiners
 
 import com.my.survey.shared_data.survey.shared_data.serializers.Serializers
-import com.my.survey.shared_data.types._
+import com.my.survey.shared_data.survey.shared_data.types.{CreateSurvey, SubmitResponse, Survey, SurveyCalculatedState, SurveyResponse, SurveySnapshot, SurveyState}
 import monocle.Monocle.toAppliedFocusOps
 import org.tessellation.currency.dataApplication.DataState
 import org.tessellation.schema.address.Address

@@ -5,18 +5,17 @@ import cats.syntax.option._
 import com.my.survey.shared_data.survey.shared_data.app.ApplicationConfigOps
 import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedStateService
 import com.my.survey.shared_data.survey.shared_data.calculated_state.postgres.PostgresService
-import com.my.survey.shared_data.types.codecs.JsonBinaryCodec
 import com.my.survey.l0.custom_routes.CustomRoutes
-import com.my.survey.shared_data.survey.shared_data.types.SurveySnapshot
-import com.my.survey.shared_data.survey.shared_data.rate_limiter.RateLimiter
+import com.my.survey.shared_data.survey.shared_data.codecs.JsonBinaryCodec
+import com.my.survey.shared_data.survey.shared_data.types.{SurveyCalculatedState, SurveySnapshot, SurveyState, SurveyUpdate}
+import com.my.survey.shared_data.survey.shared_data.ratelimit.RateLimiter
 import org.tessellation.BuildInfo
 import org.tessellation.currency.dataApplication._
-import org.tessellation.currency.l0.{CurrencyL0App, ApiClient}
+import org.tessellation.currency.l0.{ApiClient, CurrencyL0App}
 import org.tessellation.ext.cats.effect.ResourceIO
 import org.tessellation.json.JsonSerializer
 import org.tessellation.schema.cluster.ClusterId
 import org.tessellation.schema.semver.{MetagraphVersion, TessellationVersion}
-import org.tessellation.node.shared.domain.snapshot.SnapshotOps
 import org.tessellation.security.SecurityProvider
 import org.tessellation.currency.schema.currency.{CurrencyIncrementalSnapshot, CurrencySnapshotStateProof}
 import org.tessellation.node.shared.domain.rewards.Rewards
@@ -32,7 +31,7 @@ object Main extends CurrencyL0App(
   tessellationVersion = TessellationVersion.unsafeFrom(BuildInfo.version)
 ) {
 
-  override def dataApplication: Option[Resource[IO, DataApplicationL0Service[IO] with SnapshotOps[IO, SurveySnapshot]]] = {
+  override def dataApplication: Option[Resource[IO, DataApplicationL0Service[IO, SurveyUpdate, SurveyState, SurveyCalculatedState]]] = {
     (for {
       implicit0(json2bin: JsonSerializer[IO]) <- JsonBinaryCodec.forSync[IO].asResource
       config <- ApplicationConfigOps.readDefault[IO].asResource

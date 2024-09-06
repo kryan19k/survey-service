@@ -1,9 +1,11 @@
 package com.my.survey.shared_data.survey.shared_data.types
 
-import io.circe.{Decoder, Encoder, Json, DecodingFailure}
+import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import io.circe.generic.semiauto._
 import org.tessellation.schema.address.Address
 import cats.data.ValidatedNel
+import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedState
+import org.tessellation.currency.dataApplication.{DataCalculatedState, DataOnChainState, DataUpdate}
 
 import java.util.UUID
 import java.time.Instant
@@ -67,14 +69,14 @@ case class SurveyState(
   surveys: Map[UUID, Survey],
   responses: Map[UUID, List[SurveyResponse]],
   rewards: Map[Address, BigInt]
-)
+) extends DataOnChainState
 
 object SurveyState {
   implicit val encoder: Encoder[SurveyState] = deriveEncoder[SurveyState]
   implicit val decoder: Decoder[SurveyState] = deriveDecoder[SurveyState]
 }
 
-sealed trait SurveyUpdate
+sealed trait SurveyUpdate extends DataUpdate
 case class CreateSurvey(survey: Survey) extends SurveyUpdate
 case class SubmitResponse(response: SurveyResponse) extends SurveyUpdate
 
@@ -106,7 +108,7 @@ case class SurveyCalculatedState(
   totalSurveys: Int,
   totalResponses: Int,
   totalRewardsDistributed: BigInt
-)
+) extends DataCalculatedState
 
 object SurveyCalculatedState {
   implicit val encoder: Encoder[SurveyCalculatedState] = deriveEncoder[SurveyCalculatedState]

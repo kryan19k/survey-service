@@ -3,7 +3,7 @@ package com.my.survey.shared_data.survey.shared_data
 import cats.data.NonEmptyList
 import cats.effect.Async
 import cats.syntax.all._
-import com.my.survey.shared_data.survey.shared_data.utils.Utils._
+import com.my.survey.shared_data.survey.shared_data.Utils.{getAllAddressesFromProofs, getFirstAddressFromProofs}
 import com.my.survey.shared_data.survey.shared_data.combiners.Combiners._
 import com.my.survey.shared_data.survey.shared_data.types._
 import com.my.survey.shared_data.survey.shared_data.validations.Validations._

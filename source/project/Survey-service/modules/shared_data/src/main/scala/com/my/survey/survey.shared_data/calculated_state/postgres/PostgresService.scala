@@ -1,12 +1,12 @@
 package com.my.survey.shared_data.survey.shared_data.calculated_state.postgres
 
 import cats.effect.Async
-import doobie._
+import cats.implicits.toFunctorOps
 import doobie.implicits._
-import doobie.postgres.implicits._
 import io.circe.parser._
 import io.circe.syntax._
 import com.my.survey.shared_data.survey.shared_data.calculated_state.CalculatedState
+import doobie.util.transactor.Transactor
 
 trait PostgresService[F[_]] {
   def getLatestState: F[Option[CalculatedState]]
